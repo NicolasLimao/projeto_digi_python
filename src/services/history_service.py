@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 from datetime import datetime
 from src.logger import get_logger
 from src.models.schemas import HistoryEntry, HistoryContextRequest
@@ -8,7 +8,7 @@ logger = get_logger(__name__)
 
 
 class HistoryService:
-    def __init__(self, supabase_client):
+    def __init__(self, supabase_client: Any):
         self.supabase = supabase_client
         self.table_name = "historico_digi"
 
