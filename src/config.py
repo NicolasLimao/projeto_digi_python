@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     # App
     log_level: str = "INFO"
     environment: str = "development"
-    score_threshold: float = 0.65
+    score_threshold: float = 0.30
     max_chunks: int = 10
 
 
