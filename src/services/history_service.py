@@ -1,8 +1,7 @@
 from typing import Any, List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from src.logger import get_logger
 from src.models.schemas import HistoryEntry, HistoryContextRequest
-import json
 
 logger = get_logger(__name__)
 
@@ -22,7 +21,7 @@ class HistoryService:
         chunks_used: int = 0,
         processing_time_ms: int = 0
     ) -> Optional[str]:
-        """Save a question-response pair to database"""
+        """Save a question-response pair to Supabase database"""
         try:
             logger.info(f"[HistoryService] Saving interaction for user {user_id}")
 
@@ -34,46 +33,79 @@ class HistoryService:
                 "score": score,
                 "chunks_used": chunks_used,
                 "processing_time_ms": processing_time_ms,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             }
 
-            # Mock implementation - replace with actual Supabase call
-            entry_id = f"history_{hash(user_id + pergunta) % 100000}"
-            logger.info(f"[HistoryService] Interaction saved with ID: {entry_id}")
+            if not self.supabase or not hasattr(self.supabase, 'table'):
+                logger.warning("[HistoryService] Supabase client not initialized, using mock")
+                return f"history_{hash(user_id + pergunta) % 100000}"
 
-            return entry_id
+            # Insert into Supabase
+            response = self.supabase.table(self.table_name).insert(data).execute()
+
+            if response.data:
+                entry_id = response.data[0].get('id')
+                logger.info(f"[HistoryService] Interaction saved with ID: {entry_id}")
+                return str(entry_id)
+            else:
+                logger.error("[HistoryService] Insert returned no data")
+                return None
+
         except Exception as e:
             logger.error(f"[HistoryService] Error saving interaction: {str(e)}")
             return None
 
     async def get_recent_history(self, user_id: str, limit: int = 5) -> List[HistoryEntry]:
-        """Fetch recent conversations for a user, ordered by timestamp DESC"""
+        """Fetch recent conversations for a user from Supabase, ordered by timestamp DESC"""
         try:
             logger.info(f"[HistoryService] Fetching {limit} recent entries for user {user_id}")
 
-            # Mock implementation - replace with actual Supabase query:
-            # SELECT * FROM historico_digi
-            # WHERE user_id = $1
-            # ORDER BY timestamp DESC
-            # LIMIT $2
+            if not self.supabase or not hasattr(self.supabase, 'table'):
+                logger.warning("[HistoryService] Supabase client not initialized, returning mock")
+                return [
+                    HistoryEntry(
+                        id=f"entry_{i}",
+                        user_id=user_id,
+                        pergunta=f"Pergunta anterior {i}",
+                        resposta=f"Resposta anterior {i}",
+                        modo="orientacao",
+                        score=0.85,
+                        chunks_used=3,
+                        processing_time_ms=500,
+                        timestamp=datetime.now(timezone.utc).isoformat()
+                    )
+                    for i in range(min(limit, 3))
+                ]
 
-            mock_history = [
-                HistoryEntry(
-                    id=f"entry_{i}",
-                    user_id=user_id,
-                    pergunta=f"Pergunta anterior {i}",
-                    resposta=f"Resposta anterior {i}",
-                    modo="orientacao",
-                    score=0.85,
-                    chunks_used=3,
-                    processing_time_ms=500,
-                    timestamp=datetime.utcnow().isoformat()
-                )
-                for i in range(min(limit, 3))
-            ]
+            # Query Supabase
+            response = (
+                self.supabase.table(self.table_name)
+                .select("*")
+                .eq("user_id", user_id)
+                .order("timestamp", desc=True)
+                .limit(limit)
+                .execute()
+            )
 
-            logger.info(f"[HistoryService] Retrieved {len(mock_history)} entries")
-            return mock_history
+            history = []
+            if response.data:
+                for item in response.data:
+                    entry = HistoryEntry(
+                        id=item.get('id'),
+                        user_id=item.get('user_id'),
+                        pergunta=item.get('pergunta'),
+                        resposta=item.get('resposta'),
+                        modo=item.get('modo', 'orientacao'),
+                        score=item.get('score', 0.0),
+                        chunks_used=item.get('chunks_used', 0),
+                        processing_time_ms=item.get('processing_time_ms', 0),
+                        timestamp=item.get('timestamp')
+                    )
+                    history.append(entry)
+
+            logger.info(f"[HistoryService] Retrieved {len(history)} entries")
+            return history
+
         except Exception as e:
             logger.error(f"[HistoryService] Error fetching history: {str(e)}")
             return []
@@ -89,7 +121,6 @@ class HistoryService:
                 logger.info("[HistoryService] No history found, returning empty context")
                 return ""
 
-            # Format as: [1] Pergunta: ... | Resposta: ...
             formatted = "HISTÓRICO RECENTE DO ANALISTA:\n\n"
             for i, entry in enumerate(entries, 1):
                 formatted += f"[{i}] Pergunta: {entry.pergunta}\n"
@@ -97,22 +128,35 @@ class HistoryService:
 
             logger.info(f"[HistoryService] History formatted ({len(entries)} entries)")
             return formatted
+
         except Exception as e:
             logger.error(f"[HistoryService] Error formatting history: {str(e)}")
             return ""
 
     async def clear_old_history(self, days_to_keep: int = 30) -> int:
-        """Delete conversation history older than N days"""
+        """Delete conversation history older than N days from Supabase"""
         try:
             logger.info(f"[HistoryService] Clearing history older than {days_to_keep} days")
 
-            # Mock implementation - replace with:
-            # DELETE FROM historico_digi
-            # WHERE timestamp < NOW() - INTERVAL '{days_to_keep} days'
+            if not self.supabase:
+                logger.warning("[HistoryService] Supabase client not initialized")
+                return 0
 
-            deleted_count = 0
+            # Calculate cutoff date
+            cutoff_date = (datetime.now(timezone.utc) - timedelta(days=days_to_keep)).isoformat()
+
+            # Delete from Supabase
+            response = (
+                self.supabase.table(self.table_name)
+                .delete()
+                .lt("timestamp", cutoff_date)
+                .execute()
+            )
+
+            deleted_count = len(response.data) if response.data else 0
             logger.info(f"[HistoryService] Deleted {deleted_count} old entries")
             return deleted_count
+
         except Exception as e:
             logger.error(f"[HistoryService] Error clearing old history: {str(e)}")
             return 0
