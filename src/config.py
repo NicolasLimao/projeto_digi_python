@@ -1,8 +1,11 @@
 from pydantic_settings import BaseSettings
+from pydantic import ConfigDict
 from typing import Optional
 
 
 class Settings(BaseSettings):
+    model_config = ConfigDict(env_file=".env", case_sensitive=False, extra="ignore")
+
     # OpenAI
     openai_api_key: str
 
@@ -25,16 +28,19 @@ class Settings(BaseSettings):
 
     # History service
     history_enabled: bool = True
+    history_retention_days: int = 90
+
+    # Discord DM
+    discord_dm_enabled: bool = True
+
+    # RAG API
+    rag_api_url: str = "http://localhost:8000/api/rag/query"
 
     # App
     log_level: str = "INFO"
     environment: str = "development"
     score_threshold: float = 0.65
     max_chunks: int = 10
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
 
 
 settings = Settings()
