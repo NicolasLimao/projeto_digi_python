@@ -49,7 +49,7 @@ class SupabaseService:
 
     async def search_hybrid(self, embedding: List[float], query: str, k: int = 10, score_threshold: float = 0.0) -> List[Document]:
         """Perform hybrid (semantic + full-text) search on Supabase"""
-        logger.info(f"[SupabaseService] Searching hybrid for: {query[:50]}... (k={k})")
+        logger.info(f"[SupabaseService] Searching hybrid for: {query[:50]}... (k={k}, threshold={score_threshold})")
 
         if not self.client:
             logger.warning("[SupabaseService] No Supabase client, returning mock results")
@@ -82,28 +82,32 @@ class SupabaseService:
             response = self.client.rpc(
                 "match_documents_hybrid",
                 {
-                    "query_embedding": embedding,
                     "query_text": query,
-                    "semantic_weight": 0.6,
-                    "full_text_weight": 0.4,
+                    "query_embedding": str(embedding),
                     "match_count": k,
-                    "match_threshold": score_threshold
+                    "full_text_weight": 0.5,
+                    "semantic_weight": 0.5
                 }
             ).execute()
 
+            logger.info(f"[SupabaseService] RPC returned {len(response.data) if response.data else 0} raw results")
+
             documents = []
             if response.data:
-                for item in response.data:
-                    doc = Document(
-                        id=item.get("id"),
-                        content=item.get("content"),
-                        embedding=item.get("embedding", embedding),
-                        metadata=item.get("metadata", {}),
-                        score=item.get("score", 0.0)
-                    )
-                    documents.append(doc)
+                for idx, item in enumerate(response.data):
+                    score = item.get("score", 0.0)
+                    logger.debug(f"[SupabaseService] Result {idx}: score={score}, content={item.get('content', '')[:50]}")
+                    if score >= score_threshold:
+                        doc = Document(
+                            id=item.get("id", f"chunk_{idx}"),
+                            content=item.get("content"),
+                            embedding=item.get("embedding", embedding),
+                            metadata=item.get("metadata", {}),
+                            score=score
+                        )
+                        documents.append(doc)
 
-            logger.info(f"[SupabaseService] Found {len(documents)} documents (score_threshold={score_threshold})")
+            logger.info(f"[SupabaseService] Found {len(documents)} documents after filtering (threshold={score_threshold})")
             return documents
 
         except Exception as e:

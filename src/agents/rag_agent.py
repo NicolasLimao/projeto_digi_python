@@ -12,7 +12,7 @@ class RAGAgent(Agent):
         self.openai = openai_service
         self.supabase = supabase_service
 
-    async def execute(self, query: str, mode: str = "orientacao", k: int = 5) -> Dict[str, Any]:
+    async def execute(self, query: str, mode: str = "orientacao", k: int = 10) -> Dict[str, Any]:
         """
         Execute RAG pipeline:
         1. Get embeddings for query
@@ -24,17 +24,26 @@ class RAGAgent(Agent):
         self.logger.info(f"[{self.name}] Processing query: {query[:50]}... (mode={mode}, k={k})")
 
         try:
-            embedding = await self.openai.get_embeddings(query)
+            search_query = await self.openai.rewrite_query(query)
+            self.logger.info(f"[{self.name}] Search query: {search_query[:80]}")
+
+            embedding = await self.openai.get_embeddings(search_query)
             self.logger.info(f"[{self.name}] Got embeddings ({len(embedding)} dims)")
+
+            final_n = min(k, settings.max_chunks)
+            candidate_k = final_n + 5
 
             documents = await self.supabase.search_hybrid(
                 embedding=embedding,
-                query=query,
-                k=min(k, settings.max_chunks),
+                query=search_query,
+                k=candidate_k,
                 score_threshold=settings.score_threshold
             )
 
-            self.logger.info(f"[{self.name}] Retrieved {len(documents)} documents")
+            self.logger.info(f"[{self.name}] Retrieved {len(documents)} candidate documents")
+
+            documents = await self.openai.rerank(search_query, documents, top_n=final_n)
+            self.logger.info(f"[{self.name}] After rerank: {len(documents)} documents")
 
             chunks = [doc.content for doc in documents]
             if not chunks:
