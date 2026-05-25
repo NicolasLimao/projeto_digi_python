@@ -151,21 +151,16 @@ ou
             logger.error(f"[OpenAIService] Error getting embeddings: {str(e)}, returning mock")
             return [0.1] * 1536
 
-    async def rewrite_query(self, query: str) -> str:
+    async def rewrite_query(self, query: str, history: str = "") -> str:
         """Extract the core search intent from a raw message, for better retrieval.
-        Used only for the vector/full-text search — generation keeps the original query."""
+        Used only for the vector/full-text search — generation keeps the original query.
+        If history is provided, resolves references (ex.: "isso", "ele") into a self-contained query."""
         logger.info(f"[OpenAIService] Rewriting query for search: {query[:50]}...")
 
         if not self.client:
             return query
 
-        try:
-            response = await self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": """Você reescreve mensagens em uma consulta de busca para uma base vetorial sobre a plataforma Digisac (atendimento multicanal: WhatsApp/WABA, Instagram, webhooks, API, kanban, funil, campanhas, etc.).
+        system_content = """Você reescreve mensagens em uma consulta de busca para uma base vetorial sobre a plataforma Digisac (atendimento multicanal: WhatsApp/WABA, Instagram, webhooks, API, kanban, funil, campanhas, etc.).
 
 Extraia a INTENÇÃO DE BUSCA central: o tema técnico que precisa ser encontrado na documentação.
 
@@ -173,8 +168,18 @@ REGRAS:
 - Remova enquadramento ("Dúvida do cliente", "Pergunta do cliente"), observações (Obs.1, Obs.2), justificativas, raciocínio, instruções ao analista e nomes de terceiros sem relação com a Digisac.
 - Mantenha os termos técnicos da Digisac (webhook, payload, WABA, mensagem gatilho, kanban, etc.).
 - Saída: UMA linha, em português, concisa, só com os termos de busca. Sem aspas, sem explicação, sem prefixo."""
-                    },
-                    {"role": "user", "content": query}
+
+        user_content = query
+        if history:
+            system_content += "\n- Se a pergunta atual faz referência a algo anterior (\"isso\", \"ele\", \"e aí?\", \"como faço\"), use o HISTÓRICO para tornar a consulta autossuficiente."
+            user_content = f"HISTÓRICO DA CONVERSA:\n{history}\n\nPERGUNTA ATUAL: {query}"
+
+        try:
+            response = await self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system_content},
+                    {"role": "user", "content": user_content}
                 ],
                 temperature=0,
                 max_tokens=60
@@ -234,8 +239,8 @@ REGRAS:
             logger.error(f"[OpenAIService] Error reranking: {str(e)}, using original order")
             return chunks[:top_n]
 
-    async def generate_response(self, query: str, chunks: List[str], mode: str) -> str:
-        """Generate response using RAG context from chunks"""
+    async def generate_response(self, query: str, chunks: List[str], mode: str, history: str = "") -> str:
+        """Generate response using RAG context from chunks, with optional conversation history"""
         logger.info(f"[OpenAIService] Generating response for mode: {mode}, chunks: {len(chunks)}")
 
         if not self.client:
@@ -244,6 +249,14 @@ REGRAS:
 
         try:
             context = "\n\n".join([f"[Trecho {i+1}]\n{chunk.content if hasattr(chunk, 'content') else chunk}" for i, chunk in enumerate(chunks)])
+
+            history_block = ""
+            if history:
+                history_block = (
+                    f"{history}\n"
+                    "Use o HISTÓRICO acima para manter continuidade e resolver referências "
+                    "(ex.: \"isso\", \"e aí?\"). Se a pergunta atual for independente, ignore o histórico.\n\n"
+                )
 
             system_prompt = f"""# DIGI — ESPECIALISTA DA PLATAFORMA DIGISAC
 
@@ -344,7 +357,7 @@ Um encaminhamento limpo é melhor que uma resposta vaga ou inventada.
 BASE DE CONHECIMENTO:
 {context}
 
-CLASSIFICAÇÃO: {mode}
+{history_block}CLASSIFICAÇÃO: {mode}
 PERGUNTA DO USUÁRIO:
 {query}"""
 

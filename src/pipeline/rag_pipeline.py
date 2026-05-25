@@ -6,6 +6,7 @@ from src.agents.rag_agent import RAGAgent
 from src.agents.formatter_agent import FormatterAgent
 from src.services.history_service import HistoryService
 from src.models.schemas import QueryResponse
+from src.config import settings
 from src.logger import get_logger
 
 logger = get_logger(__name__)
@@ -67,7 +68,17 @@ class RAGPipeline:
                 self.logger.info("[RAGPipeline] Query out of scope, returning early")
                 return response
 
-            rag_result = await self.rag_agent.execute(query, mode=classification)
+            history_context = ""
+            if settings.history_enabled:
+                history_context = await self.history.format_history_for_prompt(
+                    user_id, limit=4, within_minutes=60
+                )
+                if history_context:
+                    self.logger.info(f"[RAGPipeline] Injecting conversation history for user {user_id}")
+
+            rag_result = await self.rag_agent.execute(
+                query, mode=classification, history_context=history_context
+            )
             formatted = await self.formatter.execute(rag_result["response"], classification)
 
             processing_time_ms = int((time() - start_time) * 1000)

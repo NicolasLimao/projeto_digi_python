@@ -55,33 +55,27 @@ class HistoryService:
             logger.error(f"[HistoryService] Error saving interaction: {str(e)}")
             return None
 
-    async def get_recent_history(self, user_id: str, limit: int = 5) -> List[HistoryEntry]:
-        """Fetch recent conversations for a user from Supabase, ordered by timestamp DESC"""
+    async def get_recent_history(self, user_id: str, limit: int = 5, within_minutes: Optional[int] = None) -> List[HistoryEntry]:
+        """Fetch recent conversations for a user from Supabase, ordered by timestamp DESC.
+        If within_minutes is set, only entries newer than that window are returned."""
         try:
             logger.info(f"[HistoryService] Fetching {limit} recent entries for user {user_id}")
 
             if not self.supabase or not hasattr(self.supabase, 'table'):
-                logger.warning("[HistoryService] Supabase client not initialized, returning mock")
-                return [
-                    HistoryEntry(
-                        id=f"entry_{i}",
-                        user_id=user_id,
-                        pergunta=f"Pergunta anterior {i}",
-                        resposta=f"Resposta anterior {i}",
-                        modo="orientacao",
-                        score=0.85,
-                        chunks_used=3,
-                        processing_time_ms=500,
-                        timestamp=datetime.now(timezone.utc).isoformat()
-                    )
-                    for i in range(min(limit, 3))
-                ]
+                logger.warning("[HistoryService] Supabase client not initialized, no history")
+                return []
 
             # Query Supabase
-            response = (
+            query = (
                 self.supabase.table(self.table_name)
                 .select("*")
                 .eq("user_id", user_id)
+            )
+            if within_minutes:
+                cutoff = (datetime.now(timezone.utc) - timedelta(minutes=within_minutes)).isoformat()
+                query = query.gte("timestamp", cutoff)
+            response = (
+                query
                 .order("timestamp", desc=True)
                 .limit(limit)
                 .execute()
@@ -110,21 +104,24 @@ class HistoryService:
             logger.error(f"[HistoryService] Error fetching history: {str(e)}")
             return []
 
-    async def format_history_for_prompt(self, user_id: str, limit: int = 5) -> str:
-        """Format conversation history into a string for prompt injection"""
+    async def format_history_for_prompt(self, user_id: str, limit: int = 5, within_minutes: Optional[int] = None) -> str:
+        """Format conversation history into a string for prompt injection (chronological order)"""
         try:
             logger.info(f"[HistoryService] Formatting history for user {user_id}")
 
-            entries = await self.get_recent_history(user_id, limit)
+            entries = await self.get_recent_history(user_id, limit, within_minutes)
 
             if not entries:
                 logger.info("[HistoryService] No history found, returning empty context")
                 return ""
 
-            formatted = "HISTÓRICO RECENTE DO ANALISTA:\n\n"
+            # get_recent_history retorna do mais novo ao mais antigo; inverte para ler cronologicamente
+            entries = list(reversed(entries))
+
+            formatted = "HISTÓRICO DA CONVERSA (mensagens anteriores deste usuário, da mais antiga à mais recente):\n\n"
             for i, entry in enumerate(entries, 1):
-                formatted += f"[{i}] Pergunta: {entry.pergunta}\n"
-                formatted += f"    Resposta: {entry.resposta}\n\n"
+                formatted += f"[{i}] Usuário: {entry.pergunta}\n"
+                formatted += f"    Digi: {entry.resposta}\n\n"
 
             logger.info(f"[HistoryService] History formatted ({len(entries)} entries)")
             return formatted

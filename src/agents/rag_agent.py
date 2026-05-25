@@ -12,7 +12,7 @@ class RAGAgent(Agent):
         self.openai = openai_service
         self.supabase = supabase_service
 
-    async def execute(self, query: str, mode: str = "orientacao", k: int = 10) -> Dict[str, Any]:
+    async def execute(self, query: str, mode: str = "orientacao", k: int = 10, history_context: str = "") -> Dict[str, Any]:
         """
         Execute RAG pipeline:
         1. Get embeddings for query
@@ -24,7 +24,7 @@ class RAGAgent(Agent):
         self.logger.info(f"[{self.name}] Processing query: {query[:50]}... (mode={mode}, k={k})")
 
         try:
-            search_query = await self.openai.rewrite_query(query)
+            search_query = await self.openai.rewrite_query(query, history_context)
             self.logger.info(f"[{self.name}] Search query: {search_query[:80]}")
 
             embedding = await self.openai.get_embeddings(search_query)
@@ -51,7 +51,7 @@ class RAGAgent(Agent):
                 response = "Desculpe, não encontrei informações sobre este tópico na base de conhecimento."
                 avg_score = 0.0
             else:
-                response = await self.openai.generate_response(query, documents, mode)
+                response = await self.openai.generate_response(query, documents, mode, history_context)
                 avg_score = sum([doc.score or 0.0 for doc in documents]) / len(documents)
 
             formatted_response = await self.openai.format_response(response, mode)

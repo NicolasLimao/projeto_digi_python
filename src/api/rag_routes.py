@@ -27,8 +27,9 @@ def get_supabase_service() -> SupabaseService:
 
 
 def get_history_service() -> HistoryService:
-    """Get HistoryService instance - TODO: inject real Supabase client"""
-    return HistoryService(None)
+    """Get HistoryService with a real Supabase client"""
+    svc = SupabaseService(url=settings.supabase_url, key=settings.supabase_anon_key)
+    return HistoryService(svc.client)
 
 
 def get_rag_pipeline(
