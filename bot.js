@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, ChannelType } = require('discord.js');
+const { Client, GatewayIntentBits, ChannelType, Partials } = require('discord.js');
 const axios = require('axios');
 require('dotenv').config();
 
@@ -8,7 +8,8 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.DirectMessages,
     GatewayIntentBits.MessageContent
-  ]
+  ],
+  partials: [Partials.Channel, Partials.Message]
 });
 
 // URLs e IDs
@@ -125,7 +126,7 @@ client.on('messageCreate', async (message) => {
     }
 
     // 3. DMs (Privadas) - Novo: Python RAG
-    if (message.channel.isDMBased && message.channel.type === ChannelType.DM) {
+    if (message.channel.type === ChannelType.DM) {
       const userId = message.author.id;
       const userName = message.author.username;
       const userQuery = message.content;
