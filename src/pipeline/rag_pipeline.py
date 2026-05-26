@@ -1,3 +1,4 @@
+import asyncio
 from typing import Optional
 from time import time
 from src.agents.classifier import ClassifierAgent
@@ -48,16 +49,27 @@ class RAGPipeline:
         self.logger.info(f"[RAGPipeline] Starting pipeline for user {user_id}")
 
         try:
-            if not mode:
-                classification = await self.classifier.execute(query)
-                self.logger.info(f"[RAGPipeline] Classified as: {classification}")
-            else:
-                classification = mode
+            # Histórico primeiro (a reescrita da query o utiliza)
+            history_context = ""
+            if settings.history_enabled:
+                history_context = await self.history.format_history_for_prompt(
+                    user_id, limit=4, within_minutes=60
+                )
+                if history_context:
+                    self.logger.info(f"[RAGPipeline] Injecting conversation history for user {user_id}")
 
-            validation = await self.validator.execute(query)
-            self.logger.info(f"[RAGPipeline] Scope validation: {validation['dentro_do_escopo']}")
+            # Classificar + validar + recuperar — as três EM PARALELO
+            # (classificador dedicado é mais preciso; paralelizar esconde o custo sob a recuperação)
+            classify_task = asyncio.create_task(self.classifier.execute(query))
+            validate_task = asyncio.create_task(self.validator.execute(query))
+            retrieve_task = asyncio.create_task(self.rag_agent.retrieve(query, history_context))
+            classification_raw, validation, retr = await asyncio.gather(classify_task, validate_task, retrieve_task)
 
-            if not validation.get("dentro_do_escopo", False):
+            classification = mode or classification_raw
+            self.logger.info(f"[RAGPipeline] modo={classification}, escopo={validation.get('dentro_do_escopo', True)}")
+
+            # Fora do escopo: retorna sem gerar
+            if not validation.get("dentro_do_escopo", True):
                 response_text = f"Desculpe, sua pergunta está fora do escopo de suporte. Motivo: {validation.get('motivo', 'Não especificado')}"
                 response = QueryResponse(
                     response=response_text,
@@ -69,26 +81,18 @@ class RAGPipeline:
                 self.logger.info("[RAGPipeline] Query out of scope, returning early")
                 return response
 
-            history_context = ""
-            if settings.history_enabled:
-                history_context = await self.history.format_history_for_prompt(
-                    user_id, limit=4, within_minutes=60
-                )
-                if history_context:
-                    self.logger.info(f"[RAGPipeline] Injecting conversation history for user {user_id}")
-
-            rag_result = await self.rag_agent.execute(
-                query, mode=classification, history_context=history_context
+            # Geração (precisa do modo + documentos recuperados)
+            formatted = await self.rag_agent.generate(
+                query, retr["documents"], classification, history_context
             )
-            formatted = await self.formatter.execute(rag_result["response"], classification)
 
             processing_time_ms = int((time() - start_time) * 1000)
 
             response = QueryResponse(
                 response=formatted,
                 mode=classification,
-                score=rag_result.get("score", 0.0),
-                chunks_used=rag_result.get("chunks_used", 0),
+                score=retr.get("score", 0.0),
+                chunks_used=retr.get("chunks_used", 0),
                 processing_time_ms=processing_time_ms
             )
 
@@ -100,8 +104,8 @@ class RAGPipeline:
                 score=response.score,
                 chunks_used=response.chunks_used,
                 processing_time_ms=processing_time_ms,
-                pergunta_reescrita=rag_result.get("search_query"),
-                fontes=rag_result.get("fontes"),
+                pergunta_reescrita=retr.get("search_query"),
+                fontes=retr.get("fontes"),
                 canal=canal
             )
             response.interaction_id = interaction_id
