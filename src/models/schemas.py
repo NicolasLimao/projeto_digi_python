@@ -27,6 +27,13 @@ class QueryResponse(BaseModel):
     score: float
     chunks_used: int
     processing_time_ms: float
+    interaction_id: Optional[str] = None  # id do registro salvo no histórico (para feedback)
+
+
+class FeedbackRequest(BaseModel):
+    """Feedback de uma resposta (👍/👎) vindo do Discord"""
+    interaction_id: str
+    feedback: str  # 'positivo' | 'negativo'
 
 
 class LogEntry(BaseModel):

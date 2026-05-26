@@ -56,12 +56,19 @@ class RAGAgent(Agent):
 
             formatted_response = await self.openai.format_response(response, mode)
 
+            fontes = [
+                (doc.metadata.get("fonte") if isinstance(doc.metadata, dict) else None) or doc.id
+                for doc in documents
+            ]
+
             result = {
                 "response": formatted_response,
                 "mode": mode,
                 "score": avg_score,
                 "chunks_used": len(documents),
-                "documents": documents
+                "documents": documents,
+                "search_query": search_query,
+                "fontes": fontes
             }
 
             self.logger.info(f"[{self.name}] Generated response (score={avg_score:.2f})")
@@ -74,5 +81,7 @@ class RAGAgent(Agent):
                 "mode": mode,
                 "score": 0.0,
                 "chunks_used": 0,
-                "documents": []
+                "documents": [],
+                "search_query": query,
+                "fontes": []
             }

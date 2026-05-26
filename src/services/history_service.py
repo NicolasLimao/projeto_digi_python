@@ -19,7 +19,10 @@ class HistoryService:
         modo: str = "orientacao",
         score: float = 0.0,
         chunks_used: int = 0,
-        processing_time_ms: int = 0
+        processing_time_ms: int = 0,
+        pergunta_reescrita: Optional[str] = None,
+        fontes: Optional[List[Any]] = None,
+        canal: Optional[str] = None
     ) -> Optional[str]:
         """Save a question-response pair to Supabase database"""
         try:
@@ -33,6 +36,9 @@ class HistoryService:
                 "score": score,
                 "chunks_used": chunks_used,
                 "processing_time_ms": processing_time_ms,
+                "pergunta_reescrita": pergunta_reescrita,
+                "fontes": fontes,
+                "canal": canal,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }
 
@@ -54,6 +60,30 @@ class HistoryService:
         except Exception as e:
             logger.error(f"[HistoryService] Error saving interaction: {str(e)}")
             return None
+
+    async def update_feedback(self, interaction_id: str, feedback: str) -> bool:
+        """Update the feedback (positivo/negativo) of a saved interaction"""
+        try:
+            logger.info(f"[HistoryService] Updating feedback for {interaction_id}: {feedback}")
+
+            if not self.supabase or not hasattr(self.supabase, 'table'):
+                logger.warning("[HistoryService] Supabase client not initialized, skip feedback")
+                return False
+
+            response = (
+                self.supabase.table(self.table_name)
+                .update({"feedback": feedback})
+                .eq("id", interaction_id)
+                .execute()
+            )
+
+            updated = bool(response.data)
+            logger.info(f"[HistoryService] Feedback updated: {updated}")
+            return updated
+
+        except Exception as e:
+            logger.error(f"[HistoryService] Error updating feedback: {str(e)}")
+            return False
 
     async def get_recent_history(self, user_id: str, limit: int = 5, within_minutes: Optional[int] = None) -> List[HistoryEntry]:
         """Fetch recent conversations for a user from Supabase, ordered by timestamp DESC.

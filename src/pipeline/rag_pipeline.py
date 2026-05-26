@@ -32,7 +32,8 @@ class RAGPipeline:
         self,
         query: str,
         user_id: str,
-        mode: Optional[str] = None
+        mode: Optional[str] = None,
+        canal: str = "desconhecido"
     ) -> QueryResponse:
         """
         Execute full RAG pipeline:
@@ -91,15 +92,19 @@ class RAGPipeline:
                 processing_time_ms=processing_time_ms
             )
 
-            await self.history.save_interaction(
+            interaction_id = await self.history.save_interaction(
                 user_id=user_id,
                 pergunta=query,
                 resposta=formatted,
                 modo=classification,
                 score=response.score,
                 chunks_used=response.chunks_used,
-                processing_time_ms=processing_time_ms
+                processing_time_ms=processing_time_ms,
+                pergunta_reescrita=rag_result.get("search_query"),
+                fontes=rag_result.get("fontes"),
+                canal=canal
             )
+            response.interaction_id = interaction_id
 
             self.logger.info(f"[RAGPipeline] Completed pipeline in {processing_time_ms}ms")
             return response

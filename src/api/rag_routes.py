@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from src.models.schemas import QueryRequest, QueryResponse
+from src.models.schemas import QueryRequest, QueryResponse, FeedbackRequest
 from src.services.openai_service import OpenAIService
 from src.services.supabase_service import SupabaseService
 from src.services.history_service import HistoryService
@@ -50,6 +50,7 @@ def get_rag_pipeline(
 async def query_rag(
     request: QueryRequest,
     user_id: str,
+    canal: str = "desconhecido",
     pipeline: RAGPipeline = Depends(get_rag_pipeline)
 ) -> QueryResponse:
     """
@@ -79,7 +80,8 @@ async def query_rag(
         result = await pipeline.process(
             query=request.query,
             user_id=user_id,
-            mode=request.mode
+            mode=request.mode,
+            canal=canal
         )
 
         logger.info(f"[API] Query processed successfully (score={result.score:.2f})")
@@ -90,3 +92,21 @@ async def query_rag(
     except Exception as e:
         logger.error(f"[API] Error processing RAG query: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing query: {str(e)}")
+
+
+@router.post("/feedback")
+async def submit_feedback(
+    request: FeedbackRequest,
+    history: HistoryService = Depends(get_history_service)
+):
+    """Register 👍/👎 feedback for a saved interaction (called by the Discord bot)."""
+    logger.info(f"[API] Feedback for {request.interaction_id}: {request.feedback}")
+
+    if request.feedback not in ("positivo", "negativo"):
+        raise HTTPException(status_code=400, detail="feedback deve ser 'positivo' ou 'negativo'")
+
+    ok = await history.update_feedback(request.interaction_id, request.feedback)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Interação não encontrada ou atualização falhou")
+
+    return {"status": "ok", "interaction_id": request.interaction_id, "feedback": request.feedback}
