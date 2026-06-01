@@ -20,6 +20,9 @@ npm-debug.log*
 # Logs
 *.log
 
+# Backups locais (chunks, dumps, etc.)
+backups/
+
 # OS / IDE
 .DS_Store
 Thumbs.db
