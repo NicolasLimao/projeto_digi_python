@@ -1,298 +1,156 @@
-# Digi RAG - Sistema de Suporte Inteligente para Digisac
+# Digi — Agente RAG para Suporte Técnico Interno
 
-> **RAG (Retrieval-Augmented Generation) 100% em Python** com integração Discord e Supabase
+Assistente conversacional baseado em IA generativa que responde dúvidas técnicas via Discord, consultando a documentação completa de uma plataforma de atendimento multicanal (Digisac). Reduz o tempo gasto buscando informações em manuais a uma conversa de poucos segundos, com respostas fundamentadas em fontes oficiais.
 
-## 🚀 Quick Start
-
-### 1. Instalar Dependências
-
-```bash
-# Windows (no prompt do projeto)
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-### 2. Configurar Credenciais
-
-As credenciais já estão em `.env` com valores reais dos workflows n8n.
-
-Caso queira usar outras, edite o arquivo `.env`:
-```env
-OPENAI_API_KEY=sk-proj-xxxxx
-SUPABASE_URL=https://xxxxx.supabase.co
-SUPABASE_ANON_KEY=xxxxx
-DISCORD_BOT_TOKEN=xxxxx
-```
-
-### 3. Rodar Servidor
-
-**Opção 1: PowerShell (Recomendado)**
-```powershell
-# Rodar do VS Code ou PowerShell
-.\run.ps1
-```
-
-**Opção 2: Batch (Windows)**
-```cmd
-run.bat
-```
-
-**Opção 3: Direto**
-```bash
-# Com venv ativado
-python main.py
-```
-
-### 4. Testar
-
-```bash
-# Health check
-curl http://localhost:8000/health
-
-# Swagger UI
-http://localhost:8000/docs
-
-# RAG Query
-curl -X POST http://localhost:8000/api/rag/query \
-  -H "Content-Type: application/json" \
-  -d '{"query":"Como fazer backup no Digisac?"}' \
-  ?user_id=user_123
-```
+Construído end-to-end: arquitetura RAG (Retrieval-Augmented Generation) em Python, bot Discord em Node.js, banco vetorial em PostgreSQL com pgvector via Supabase, modelos da OpenAI para embeddings e geração, ingestão de PDF com PyMuPDF e fallback para Mistral OCR, hospedado em produção na SquareCloud com auto-deploy via GitHub.
 
 ---
 
-## 📋 Arquitetura
+## O problema
 
-### Pipeline de Processamento
+Analistas de suporte N1 perdem tempo significativo buscando informações na documentação ou escalando dúvidas que poderiam ser resolvidas com acesso rápido ao manual. Cada escalação desnecessária atrasa o atendimento ao cliente final e custa tempo do time de N2.
 
-```
-Discord DM
-    ↓
-FastAPI Endpoint (/api/rag/query)
-    ↓
-ClassifierAgent (GPT-4o-mini)
-    ↓
-ScopeValidatorAgent (GPT-4o-mini)
-    ↓
-RAGAgent {
-  - Embeddings (text-embedding-3-small)
-  - Vector Search (Supabase pgvector)
-  - LLM Generation (GPT-4o-mini)
-}
-    ↓
-FormatterAgent (Mode: orientacao/resposta-cliente/bug)
-    ↓
-HistoryService (Persistência Supabase)
-    ↓
-Discord Response
-```
+## A solução
 
-### Componentes
+Um agente acessível pelo próprio canal de trabalho da equipe (Discord, em canal aberto ou em DM privada), com três comportamentos detectados automaticamente a partir do conteúdo da mensagem:
 
-| Componente | Arquivo | Descrição |
-|---|---|---|
-| **OpenAIService** | `src/services/openai_service.py` | Integração com OpenAI APIs |
-| **SupabaseService** | `src/services/supabase_service.py` | Vector search + persistência |
-| **HistoryService** | `src/services/history_service.py` | Histórico de conversas |
-| **RAGAgent** | `src/agents/rag_agent.py` | Orquestração RAG |
-| **FormatterAgent** | `src/agents/formatter_agent.py` | Formatação de resposta |
-| **RAGPipeline** | `src/pipeline/rag_pipeline.py` | Pipeline completo |
-| **API Routes** | `src/api/rag_routes.py` | Endpoints FastAPI |
+- **Orientação** — tom de colega técnico, com passos ou explicação conceitual
+- **Resposta para o cliente** — texto pronto, profissional, sem expor processos internos
+- **Bug** — checklist estruturado de investigação
+
+A intenção é classificada pelo próprio modelo a partir do conteúdo da mensagem.
 
 ---
 
-## 🔌 Endpoints API
+## Arquitetura
 
-### RAG Query
 ```
-POST /api/rag/query?user_id=<user_id>
-Content-Type: application/json
-
-Body:
-{
-  "query": "Como fazer backup?",
-  "mode": "orientacao"  # Opcional: orientacao|resposta-cliente|bug
-}
-
-Response:
-{
-  "response": "resposta formatada",
-  "mode": "orientacao",
-  "score": 0.85,
-  "chunks_used": 2,
-  "processing_time_ms": 1500
-}
-```
-
-### History APIs
-```
-# Obter histórico do usuário
-GET /api/history/user/{user_id}?limit=10
-
-# Obter contexto formatado para prompt
-POST /api/history/context
-{
-  "user_id": "user_123",
-  "limit": 5
-}
-
-# Salvar interação
-POST /api/history/save?user_id=user_123&query=...&resposta=...
-
-# Limpar histórico antigo
-DELETE /api/history/cleanup?days_to_keep=30
+Discord
+   |
+   | mensagem (canal ou DM)
+   v
+Bot Node.js
+   |
+   | HTTP POST /api/rag/query
+   v
+API Python (FastAPI)
+   |
+   |-> Classifier          (em paralelo via asyncio.gather)
+   |-> Scope Validator
+   |-> Retrieval
+   |       |
+   |       |-> rewrite query (condicional)
+   |       |-> embedding (OpenAI)
+   |       |-> hybrid search (Supabase pgvector)
+   |       |-> rerank (LLM)
+   |
+   v
+Generation Prompt -> OpenAI gpt-4o-mini -> Resposta
+   |
+   v
+Bot publica no Discord + reacoes de feedback (positivo/negativo)
+   |
+   v
+Historico salvo no Supabase (analytics + identificacao de gaps)
 ```
 
-### Health Check
-```
-GET /health
-Response: {"status": "ok", "service": "digi-rag"}
-```
+As três tarefas iniciais (classify, validate, retrieve) executam concorrentemente via `asyncio.gather`, escondendo a latência da classificação atrás da busca. A geração só roda quando o pool reranqueado está pronto.
 
 ---
 
-## 🧪 Testes
+## Stack
 
-```bash
-# Todos os testes
-pytest tests/ -v
+| Camada | Tecnologia |
+|--------|-----------|
+| API | Python, FastAPI, Uvicorn |
+| Validação | Pydantic v2 |
+| Bot | Node.js, discord.js v14 |
+| Banco | Supabase (PostgreSQL + pgvector) |
+| Embeddings | OpenAI `text-embedding-3-small` (1536 dimensões) |
+| Geração | OpenAI `gpt-4o-mini` |
+| Ingestão PDF | PyMuPDF (texto selecionável) + Mistral OCR (fallback para PDF imagem) |
+| Hospedagem | SquareCloud, com auto-deploy via GitHub |
 
-# Um arquivo específico
-pytest tests/agents/test_rag_agent.py -v
+---
 
-# Com cobertura
-pytest tests/ --cov=src
+## Técnicas de RAG implementadas
 
-# Status: 79/79 ✅
+**Busca híbrida ponderada.** Combinação 50/50 de busca semântica (embeddings) e full-text (palavra-chave) via função PL/pgSQL no Supabase. Pega o melhor dos dois mundos: relevância por significado e precisão de termos técnicos.
+
+**Reescrita de query antes do embedding.** Uma mensagem ruidosa como `Dúvida do cliente — Obs.1 — Obs.2 — Tintim...` é destilada para a intenção real (`disparos de webhook com conteúdo de mensagem`) antes de virar vetor. Em follow-ups, usa o histórico da conversa para resolver referências (`e como faço isso?` se transforma em uma query autossuficiente).
+
+**Reranking com pool ampliado.** Recupera 15 candidatos via busca híbrida, reordena por relevância real usando o LLM, mantém os 10 melhores para a geração. Aumenta recall sem inflar o contexto.
+
+**Gate adaptativo de reescrita.** Perguntas curtas e diretas pulam a reescrita (evita chamada extra de modelo); perguntas longas, com histórico ou com notas internas passam pelo pipeline completo.
+
+**Memória multi-turno por usuário.** Últimas 4 trocas do mesmo usuário (janela de 60 minutos) são injetadas no prompt, permitindo conversas reais em DM. Cada usuário tem seu próprio contexto isolado.
+
+**Loop de feedback como dataset rotulado.** Cada resposta do bot recebe reações de aprovação ou reprovação. O voto vai para a tabela `historico_digi` junto com a pergunta original, a query reescrita, as fontes retornadas, o modo, o score de recuperação e o canal. Esse conjunto alimenta views de analytics e identifica gaps documentais acionáveis para curadoria da base.
+
+---
+
+## Otimização de latência
+
+Pipeline inicial: aproximadamente **15 segundos** por resposta (cinco chamadas sequenciais ao modelo).
+
+Após paralelização das tarefas independentes via `asyncio.gather` e introdução do gate condicional na reescrita: aproximadamente **10 segundos** — redução de 34% sem perda de qualidade, validada por teste comparativo em conjunto fixo de perguntas (before/after).
+
+Próxima fronteira identificada: substituir o reranker baseado em LLM (~2,5s) por um cross-encoder local (~200ms) usando PyTorch e Transformers.
+
+---
+
+## Decisões técnicas
+
+**Por que migrar de n8n para Python puro.** O projeto começou com n8n orquestrando os workflows — bom para validar a ideia, mas opaco para debug, difícil de versionar (workflows em JSON gigante) e dependente de uma máquina rodando o n8n. A migração trouxe observabilidade, testabilidade, controle fino sobre cada etapa e removeu a dependência de infraestrutura extra. A última peça migrada foi a própria ingestão de documentos, que hoje roda dentro da API hospedada.
+
+**Por que prompt genérico em vez de regras rígidas.** Tentações iniciais de tunar o prompt para casos específicos se mostraram contraproducentes — o modelo passou a parecer travado, recitando templates fixos em vez de adaptar a resposta. A virada foi confiar no raciocínio do modelo, dando contexto rico da plataforma e instruções claras sobre adaptação (se a pergunta pede "resumido", responda em 2-4 linhas). O mesmo prompt cobre orientação, resposta-cliente e bug.
+
+**Por que feedback como métrica de qualidade real.** O score da busca (média em torno de 0.30) reflete relevância da recuperação, não qualidade da resposta. A taxa de aprovação dos usuários reais é a verdade do sistema. O score continua útil como sinal de debug, não como métrica de produto.
+
+**Por que separar API e bot em repositórios distintos.** Acoplamento conceitual, desacoplamento técnico. Cada um deploya independente, tem ciclo próprio, e o bot pode ser substituído por qualquer outro frontend (Slack, Teams, web) sem tocar na API.
+
+**Por que retrieval em vez de fine-tuning.** No curto prazo, retrieval com boa documentação resolve. Fine-tuning é caro, demora, exige conjunto rotulado relevante, e a base de documentação muda. O loop de feedback gera dataset rotulado naturalmente — quando fizer sentido, virará insumo para tuning. Por enquanto, melhorias na ingestão e no chunking dão muito mais retorno.
+
+---
+
+## Métricas em produção
+
+- **1.099 chunks** indexados a partir do manual oficial da plataforma (720 páginas)
+- **102 interações reais**, **14 usuários distintos**
+- Taxa de aprovação dos analistas: **90%** (sobre as 62 respostas avaliadas)
+- Latência mediana: aproximadamente **10 segundos**
+- **99% das conversas em DM privada** (analistas adotaram o canal direto)
+- 6 gaps documentais identificados pelo feedback negativo, encaminhados para curadoria da base
+
+---
+
+## Estrutura do projeto
+
+```
+projeto_digi_python/        (este repositorio)
+├── main.py                 ponto de entrada FastAPI
+├── src/
+│   ├── api/                endpoints (rag, ingest, history, feedback)
+│   ├── pipeline/           orquestrador do fluxo RAG
+│   ├── agents/             classifier, scope_validator, rag_agent, formatter
+│   ├── services/           openai, supabase, history, ingestion
+│   └── models/             contratos Pydantic
+├── sql/                    migracoes e views de analytics
+├── requirements.txt
+├── squarecloud.app         configuracao de deploy
+└── DOCUMENTACAO.md         documentacao tecnica detalhada
 ```
 
----
-
-## 🔧 Configuração
-
-### Variáveis de Ambiente (.env)
-
-```env
-# OpenAI
-OPENAI_API_KEY=sk-proj-xxxxx
-
-# Supabase
-SUPABASE_URL=https://xxxxx.supabase.co
-SUPABASE_ANON_KEY=xxxxx
-
-# Discord
-DISCORD_BOT_TOKEN=xxxxx
-DISCORD_GUILD_ID=1491637126440288377
-DISCORD_CHANNEL_DUVIDAS=1491637352513142914
-DISCORD_CHANNEL_LOGS=1491637401024729231
-DISCORD_CHANNEL_GAPS=1491637453298208902
-
-# RAG API
-RAG_API_URL=http://localhost:8000/api/rag/query
-
-# Configurações
-LOG_LEVEL=INFO
-ENVIRONMENT=production
-SCORE_THRESHOLD=0.65
-MAX_CHUNKS=10
-HISTORY_ENABLED=true
-HISTORY_RETENTION_DAYS=90
-DISCORD_DM_ENABLED=true
-```
+Bot Discord em repositório separado: [github.com/NicolasLimao/digi-bot](https://github.com/NicolasLimao/digi-bot)
 
 ---
 
-## 📊 Performance
+## Deploy
 
-| Operação | Tempo |
-|---|---|
-| Classificação | 200-500ms |
-| Validação de escopo | 200-500ms |
-| Embeddings | 100-300ms |
-| Vector search | 50-200ms |
-| LLM generation | 1-3s |
-| **Total e2e** | **2-5s** |
+Hospedado na SquareCloud com auto-deploy via GitHub: cada `git push` em `main` aciona redeploy automático da app correspondente. Variáveis sensíveis (chaves de API e tokens) ficam apenas no painel da hospedagem, nunca em arquivo versionado. O `.env` local serve apenas para desenvolvimento.
 
 ---
 
-## 🐛 Troubleshooting
+## Documentação técnica
 
-### ModuleNotFoundError: No module named 'fastapi'
-```bash
-# Ativar venv e reinstalar
-.venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-### "No Supabase client" / "No API key"
-O sistema usa **mock fallback** quando sem credenciais. Adicione credenciais reais em `.env`.
-
-### Conexão recusada em http://localhost:8000
-O servidor pode estar desligado. Execute `python main.py` na pasta do projeto.
-
-### Discord DM não funciona
-1. Verificar `DISCORD_DM_ENABLED=true` em `.env`
-2. Verificar `RAG_API_URL` apontando para o servidor
-3. Verificar logs do Discord bot
-
----
-
-## 📚 Documentação Detalhada
-
-- [RAG Implementation](docs/RAG_IMPLEMENTATION.md) - Arquitetura e detalhes técnicos
-- [History Feature](docs/HISTORY_FEATURE.md) - Sistema de histórico
-- [n8n Integration](contexto/WORKFLOW_HISTORY_INTEGRATION.md) - Integração com n8n
-
----
-
-## 🚢 Deployment
-
-### Docker (Recomendado)
-```bash
-docker build -t digi-rag .
-docker run -p 8000:8000 --env-file .env digi-rag
-```
-
-### Direct (Python)
-```bash
-pip install -r requirements.txt
-python main.py
-```
-
-### Produção (Uvicorn)
-```bash
-uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
-```
-
----
-
-## 📝 Commits Principais
-
-| Hash | Mensagem |
-|---|---|
-| `4f06dd9` | feat: implement complete RAG system 100% in Python |
-| `edf6cac` | config: add real API credentials from n8n workflows |
-| `72e6153` | fix: update Settings config to support new RAG fields |
-
----
-
-## 🔗 Links Úteis
-
-- **Swagger API Docs**: http://localhost:8000/docs
-- **OpenAI API**: https://platform.openai.com/docs
-- **Supabase Vector Search**: https://supabase.com/docs/guides/database/vector
-- **FastAPI**: https://fastapi.tiangolo.com/
-- **Discord.py**: https://discordpy.readthedocs.io/
-
----
-
-## 📄 License
-
-Proprietary - Digisac 2026
-
----
-
-**Status**: ✅ Production-Ready com Credenciais Reais
-**Versão**: 1.0.0
-**Última atualização**: 2026-05-21
+Para detalhes de implementação, fluxos completos, schemas de banco e justificativas internas de cada decisão, consulte [DOCUMENTACAO.md](DOCUMENTACAO.md).
