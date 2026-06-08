@@ -242,10 +242,35 @@ Cada um dos dois repos sobe como uma app separada:
 
 **Bot Node** ([digi-bot](https://github.com/NicolasLimao/digi-bot)):
 - `squarecloud.app` configurado (`MAIN=bot.js`, 256 MB RAM)
-- Variáveis no painel: `DISCORD_BOT_TOKEN`, `RAG_API_URL=https://digi-api.squarecloud.app/api/rag/query`
+- Variáveis no painel: `DISCORD_BOT_TOKEN`, `RAG_API_URL=https://digi-api.squareweb.app/api/rag/query`
 - Sem subdomínio (o bot só faz outbound — conecta no Discord via WebSocket)
 
 Sobe a **API primeiro** (precisa estar no ar pro bot conseguir chamar), depois o bot.
+
+---
+
+## 11. Ingestão de documentos (sem n8n)
+
+A ingestão é feita pela **própria API Python** — o n8n foi aposentado neste fluxo.
+
+**Fluxo:**
+1. Analista posta texto ou anexa PDF no canal `#alimentar-base`
+2. `bot.js` responde com `📥 Recebido, processando...` e chama `POST /api/ingest`
+3. `IngestionService` faz tudo:
+   - Baixa anexo (Discord CDN)
+   - Extrai texto: **PyMuPDF** primeiro (PDFs com texto selecionável, rápido e grátis); fallback **Mistral OCR** se vazio (PDFs imagem)
+   - Chunka por parágrafos (~1.000 chars por chunk, semântico)
+   - Gera embeddings em **batch** (uma chamada OpenAI por ~100 chunks)
+   - Insere em batch no Supabase (`documents`) usando a chave **service_role** (sem timeout de 8s da anon)
+4. Bot **edita** a mensagem inicial para `✅ Ingestão concluída em Ys / N chunks criados / fontes...`
+
+**Uma única mensagem visível por ingestão** — evita o rate limit do Discord (5 msgs/5s/canal).
+
+**Variáveis necessárias na API:**
+- `SUPABASE_SERVICE_ROLE_KEY` — pra inserts pesados sem o timeout da anon
+- `MISTRAL_API_KEY` — só usada se PyMuPDF retornar vazio (PDFs imagem/escaneados)
+
+**Tipos suportados hoje:** PDF (`application/pdf`), texto puro (`.txt`, `.md`). Outros tipos retornam aviso e são ignorados.
 
 ---
 

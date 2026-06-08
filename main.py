@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.api import history_routes, rag_routes
+from src.api import history_routes, rag_routes, ingest_routes
 from src.logger import get_logger
 
 logger = get_logger(__name__)
@@ -21,6 +21,7 @@ app.add_middleware(
 
 app.include_router(history_routes.router)
 app.include_router(rag_routes.router)
+app.include_router(ingest_routes.router)
 
 
 @app.get("/health")

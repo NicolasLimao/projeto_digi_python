@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     # Supabase
     supabase_url: str
     supabase_anon_key: str
+    supabase_service_role_key: Optional[str] = None  # usado pra ingestão (sem timeout/RLS)
 
     # Discord
     discord_bot_token: str
