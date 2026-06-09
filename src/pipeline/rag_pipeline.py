@@ -61,15 +61,34 @@ class RAGPipeline:
             # Classificar + validar + recuperar — as três EM PARALELO
             # (classificador dedicado é mais preciso; paralelizar esconde o custo sob a recuperação)
             classify_task = asyncio.create_task(self.classifier.execute(query))
-            validate_task = asyncio.create_task(self.validator.execute(query))
+            validate_task = asyncio.create_task(self.validator.execute(query, history_context))
             retrieve_task = asyncio.create_task(self.rag_agent.retrieve(query, history_context))
             classification_raw, validation, retr = await asyncio.gather(classify_task, validate_task, retrieve_task)
 
             classification = mode or classification_raw
-            self.logger.info(f"[RAGPipeline] modo={classification}, escopo={validation.get('dentro_do_escopo', True)}")
 
-            # Fora do escopo: retorna sem gerar
-            if not validation.get("dentro_do_escopo", True):
+            # Override por evidência da recuperação: se o validator disse "fora" mas
+            # a busca trouxe chunks fortes, é um falso positivo do validator.
+            dentro_validator = validation.get("dentro_do_escopo", True)
+            chunks_recuperados = retr.get("chunks_used", 0)
+            score_recuperacao = retr.get("score", 0.0)
+            override_retrieval = (
+                not dentro_validator
+                and chunks_recuperados >= 5
+                and score_recuperacao >= 0.20
+            )
+            dentro_escopo = dentro_validator or override_retrieval
+
+            if override_retrieval:
+                self.logger.info(
+                    f"[RAGPipeline] Validator disse fora, mas retrieval trouxe {chunks_recuperados} "
+                    f"chunks (score={score_recuperacao:.3f}). Override: tratando como DENTRO."
+                )
+
+            self.logger.info(f"[RAGPipeline] modo={classification}, escopo={dentro_escopo} (validator={dentro_validator})")
+
+            # Fora do escopo de verdade (validator E retrieval concordam): retorna sem gerar
+            if not dentro_escopo:
                 response_text = f"Desculpe, sua pergunta está fora do escopo de suporte. Motivo: {validation.get('motivo', 'Não especificado')}"
                 response = QueryResponse(
                     response=response_text,

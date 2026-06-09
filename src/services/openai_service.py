@@ -61,8 +61,8 @@ REGRAS:
             logger.error(f"[OpenAIService] Error classifying: {str(e)}, using mock")
             return "orientacao"
 
-    async def validate_scope(self, query: str) -> Dict[str, Any]:
-        """Validate if query is within Digisac scope using OpenAI"""
+    async def validate_scope(self, query: str, history: str = "") -> Dict[str, Any]:
+        """Validate if query is within Digisac scope. Uses history to resolve follow-ups."""
         logger.info(f"[OpenAIService] Validating scope: {query[:50]}...")
 
         if not self.client:
@@ -76,19 +76,15 @@ REGRAS:
                     }
             return {"dentro_do_escopo": True}
 
-        try:
-            response = await self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": """Você é um validador de escopo de suporte técnico da Digisac.
+        system_content = """Você é um validador de escopo de suporte técnico da Digisac.
 A Digisac é uma plataforma de atendimento multicanal via WhatsApp, Instagram, Facebook e outros canais digitais.
 Contexto: você recebe perguntas de analistas N1 que trabalham diariamente com a Digisac.
 
-REGRA PRINCIPAL:
-- Na dúvida, considere DENTRO do escopo.
-- Só classifique como fora do escopo se a pergunta for claramente sobre outro sistema ou assunto pessoal.
+REGRA PRINCIPAL (a mais importante):
+- **Default é DENTRO do escopo.** Só marque fora se a pergunta for CLARAMENTE sobre outro sistema ou assunto pessoal.
+- Se a pergunta mencionar "Digisac", "plataforma", "API", "WABA", "WhatsApp", "Instagram", "canal", "atendimento", "cliente", "lead", "campanha", "kanban", "funil", "robô", "bot" — é SEMPRE dentro do escopo.
+- Se a pergunta usa pronomes ou referências (ex.: "uma", "isso", "cada", "ele") e você recebeu HISTÓRICO DA CONVERSA — assuma que é continuação do assunto anterior e considere DENTRO do escopo.
+- Se houver QUALQUER dúvida, escolha DENTRO. É melhor responder fora-do-escopo errado do que recusar uma pergunta legítima.
 
 EXEMPLOS DENTRO DO ESCOPO:
 - "Como solicitar backup da plataforma?"
@@ -96,25 +92,36 @@ EXEMPLOS DENTRO DO ESCOPO:
 - "Como configurar horário de atendimento?"
 - "Como abrir um card no Pipefy?"
 - "Como usar o kanban de atendimento?"
-- "A plataforma tem disparo de webhook com conteúdo de mensagem?" → sobre funcionalidade da Digisac
-- "A Digisac suporta integração via webhook?" → sobre funcionalidade da Digisac
-- "Como funciona a API oficial da Meta (WABA)?" → integração/canal do Digisac
-- "Como configurar WhatsApp no Digisac?" → sobre Digisac
-- "Qual é a diferença entre WhatsApp Standard e WABA?" → canais do Digisac
+- "Quais IAs a Digisac tem?"
+- "pode me dar um resumo de cada uma?" (follow-up com referência — assume continuação)
+- "e como configuro isso?" (follow-up — assume continuação)
+- "tem limite de envio de arquivos?" (sobre funcionalidade da plataforma)
+- "Quais são os planos?" (sobre a plataforma)
+- "Como funciona a API oficial da Meta (WABA)?"
+- "Qual a diferença entre WhatsApp Standard e WABA?"
 
-EXEMPLOS FORA DO ESCOPO:
+EXEMPLOS FORA DO ESCOPO (só estes casos óbvios):
 - "Como faço bolo de chocolate?" → assunto pessoal
-- "Como uso o Excel?" → outro sistema sem relação
-- "Como logar no Tibia?" → jogo, sem relação com suporte
+- "Como uso o Excel?" → outro sistema sem relação alguma
+- "Como logar no Tibia?" → jogo
 - "Qual o resultado do jogo ontem?" → assunto pessoal
-- "Como instalar o Windows?" → outro sistema sem relação
+- "Como instalar o Windows?" → outro sistema
 
 RESPONDA APENAS no formato JSON:
 {"dentro_do_escopo": true}
 ou
 {"dentro_do_escopo": false, "motivo": "breve explicação"}"""
-                    },
-                    {"role": "user", "content": query}
+
+        user_content = query
+        if history:
+            user_content = f"HISTÓRICO DA CONVERSA:\n{history}\n\nPERGUNTA ATUAL: {query}"
+
+        try:
+            response = await self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system_content},
+                    {"role": "user", "content": user_content}
                 ],
                 temperature=0,
                 max_tokens=100

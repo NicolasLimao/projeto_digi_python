@@ -8,11 +8,11 @@ class ScopeValidatorAgent(Agent):
         super().__init__("ScopeValidator")
         self.openai = openai_service
 
-    async def execute(self, query: str) -> Dict[str, Any]:
-        """Validar se pergunta está dentro do escopo Digisac"""
+    async def execute(self, query: str, history_context: str = "") -> Dict[str, Any]:
+        """Validar se pergunta está dentro do escopo Digisac (considerando o histórico se houver)"""
         self.logger.info(f"[{self.name}] Validating scope: {query[:50]}...")
 
-        result = await self.openai.validate_scope(query)
+        result = await self.openai.validate_scope(query, history_context)
 
         self.logger.info(f"[{self.name}] Result: {result}")
         return result
