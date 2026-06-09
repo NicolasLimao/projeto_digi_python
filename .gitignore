@@ -25,6 +25,21 @@ backups/
 
 # Ferramentas de IA / metadados de assistente
 .claude/
+docs/superpowers/
+
+# Material interno / de desenvolvimento (não vai pro repo público)
+contexto/
+STATUS_DESENVOLVIMENTO.md
+BOT_UPDATE_INSTRUCTIONS.md
+DISCORD_BOT_SETUP.md
+
+# Código antigo / abandonado
+discord/
+bot-updated.js
+
+# Scripts locais de execução (README documenta o `python main.py`)
+run.bat
+run.ps1
 
 # OS / IDE
 .DS_Store
