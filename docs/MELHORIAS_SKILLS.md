@@ -307,7 +307,9 @@ Como o ecossistema é jovem, muitas categorias do projeto ainda não têm skill 
 
 Ordenado por relação **valor / esforço**:
 
-### Fase 1 — Ganhos rápidos no DB (1 hora, hoje) — **PARCIALMENTE EXECUTADA**
+### Fase 1 — Ganhos rápidos no DB (1 hora, hoje) — ✓ **EXECUTADA**
+
+> SQL rodado com sucesso no Supabase. Índices criados e `pg_stat_statements` habilitado.
 
 1. Rodar SQL de novos índices (`historico_digi.timestamp`, `documents.metadata`, parcial de feedback negativo) — **15 min**
 2. Habilitar `pg_stat_statements` — **5 min**
@@ -330,16 +332,29 @@ Ordenado por relação **valor / esforço**:
 4. Após algumas horas de uso, consultar `pg_stat_statements` (queries de validação estão comentadas no fim do arquivo SQL)
 5. **(Opcional)** Rodar `EXPLAIN ANALYZE` na RPC `match_documents_hybrid` para conferir se há ganho aparente; se aparecer `Seq Scan` em `documents`, indicar a falta de índice vetorial (ivfflat/hnsw) na coluna `embedding`
 
-### Fase 2 — Observability com Sentry (2-3 horas, esta semana)
+### Fase 2 — Observability com Sentry — ✓ **CÓDIGO PRONTO (aguarda DSN no painel)**
 
-1. Criar projeto Sentry (free tier) e copiar o DSN
-2. Adicionar `sentry-sdk[fastapi]` ao `requirements.txt`
-3. Instrumentar o `main.py` (10 linhas)
-4. Configurar `SENTRY_DSN` + `ENVIRONMENT=production` na SquareCloud
-5. Deploy e validar que erros aparecem no painel do Sentry
-6. Criar 1 alerta básico: "erros > 5 em 5 min" → email/Slack
+Mudanças aplicadas no código:
 
-**Entregável**: PR com a instrumentação + variáveis novas documentadas no `.env.example`.
+1. ✓ `requirements.txt`: `sentry-sdk[fastapi]>=2.0.0`
+2. ✓ `main.py`: bloco condicional de `sentry_sdk.init()` no topo (só ativa se `SENTRY_DSN` estiver definido — sem DSN, app roda normal)
+3. ✓ `.env.example`: novas variáveis `SENTRY_DSN`, `RELEASE_VERSION`, `SENTRY_TRACES_SAMPLE_RATE`, `SENTRY_PROFILES_SAMPLE_RATE`
+4. ✓ `DOCUMENTACAO.md`: seção 10b explicando o que é capturado, configurações e investigação via CLI
+5. ✓ Integrações `StarletteIntegration` + `FastApiIntegration` com `transaction_style="endpoint"` (nome de transação fica `POST /api/rag/query` em vez de path bruto)
+6. ✓ `send_default_pii=False` — não envia IP, headers de auth nem payloads do usuário
+
+**Aguardando ação do usuário (passos finais, ~10 min):**
+
+1. Criar conta gratuita em [sentry.io](https://sentry.io) e um projeto Python/FastAPI
+2. Copiar o DSN do projeto (formato: `https://abc...@oXXX.ingest.sentry.io/YYY`)
+3. No painel da **SquareCloud → Digi RAG API → Variáveis de ambiente**, adicionar:
+   - `SENTRY_DSN=<o-dsn-copiado>`
+   - `ENVIRONMENT=production`
+   - `RELEASE_VERSION=<short-sha-do-commit-atual>` (opcional, mas recomendado pra release tracking)
+4. Salvar e a app reinicia sozinha. Os logs devem mostrar: `[Sentry] Instrumentação ativa (env=production)`
+5. (Opcional) No Sentry, ir em **Alerts → Create Alert Rule** e criar um básico: "erros > 5 em 5 min" → email
+
+**Como validar:** depois de algumas requests reais ou um erro forçado, o issue aparece em `sentry.io → seu projeto → Issues`.
 
 ### Fase 3 — Decisão arquitetural sobre RLS (1 dia, quando tornar repo público)
 

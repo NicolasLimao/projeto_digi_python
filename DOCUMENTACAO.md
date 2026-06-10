@@ -249,6 +249,38 @@ Sobe a **API primeiro** (precisa estar no ar pro bot conseguir chamar), depois o
 
 ---
 
+## 10b. Observabilidade (Sentry)
+
+A API tem instrumentação opcional via [Sentry](https://sentry.io). O setup é
+condicional: só ativa se a variável `SENTRY_DSN` estiver definida no ambiente.
+Sem ela, a app roda normalmente sem reportar nada.
+
+**O que é capturado quando ativo:**
+- Exceções não tratadas (com stack trace, request context, etc.)
+- Traces de performance (por endpoint, com 10% de amostragem)
+- Profiles de CPU (10% de amostragem)
+- Logs estruturados
+
+**Não é enviado:**
+- Dados do usuário (`send_default_pii=False`) — IPs, headers de auth, payloads
+  ficam fora
+
+**Variáveis relevantes (no painel da SquareCloud):**
+
+| Variável | Função |
+|----------|--------|
+| `SENTRY_DSN` | DSN do projeto Sentry. Sem ela, instrumentação fica off |
+| `RELEASE_VERSION` | Tag de release (ex.: short SHA). Liga issues a commits |
+| `SENTRY_TRACES_SAMPLE_RATE` | Padrão `0.1` (10%). Controla cota do free tier |
+| `SENTRY_PROFILES_SAMPLE_RATE` | Padrão `0.1` |
+
+**Investigação via CLI** (skill `sentry-cli` instalada):
+- `sentry issue list --query "is:unresolved"` — issues abertas
+- `sentry issue view DIGI-RAG-1` — detalhes
+- `sentry issue explain DIGI-RAG-1` — análise de causa raiz por IA
+
+---
+
 ## 11. Ingestão de documentos (sem n8n)
 
 A ingestão é feita pela **própria API Python** — o n8n foi aposentado neste fluxo.
