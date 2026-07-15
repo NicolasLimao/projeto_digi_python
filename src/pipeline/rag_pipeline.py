@@ -1,14 +1,15 @@
 import asyncio
-from typing import Optional
 from time import time
+from typing import Any
+
 from src.agents.classifier import ClassifierAgent
-from src.agents.scope_validator import ScopeValidatorAgent
-from src.agents.rag_agent import RAGAgent
 from src.agents.formatter_agent import FormatterAgent
-from src.services.history_service import HistoryService
-from src.models.schemas import QueryResponse
-from src.config import settings
+from src.agents.rag_agent import RAGAgent
+from src.agents.scope_validator import ScopeValidatorAgent
+from src.config import Settings, get_settings
 from src.logger import get_logger
+from src.models.schemas import Mode, QueryResponse
+from src.services.history_service import HistoryService
 
 logger = get_logger(__name__)
 
@@ -20,21 +21,19 @@ class RAGPipeline:
         validator: ScopeValidatorAgent,
         rag_agent: RAGAgent,
         formatter: FormatterAgent,
-        history_service: HistoryService
+        history_service: HistoryService,
+        config: Settings | None = None,
     ):
         self.classifier = classifier
         self.validator = validator
         self.rag_agent = rag_agent
         self.formatter = formatter
         self.history = history_service
+        self.config = config or get_settings()
         self.logger = logger
 
     async def process(
-        self,
-        query: str,
-        user_id: str,
-        mode: Optional[str] = None,
-        canal: str = "desconhecido"
+        self, query: str, user_id: str, mode: str | None = None, canal: str = "desconhecido"
     ) -> QueryResponse:
         """
         Execute full RAG pipeline:
@@ -46,26 +45,30 @@ class RAGPipeline:
         6. Return response
         """
         start_time = time()
-        self.logger.info(f"[RAGPipeline] Starting pipeline for user {user_id}")
+        self.logger.info("RAG pipeline started")
 
         try:
             # Histórico primeiro (a reescrita da query o utiliza)
             history_context = ""
-            if settings.history_enabled:
+            if self.config.history_enabled:
                 history_context = await self.history.format_history_for_prompt(
                     user_id, limit=4, within_minutes=60
                 )
                 if history_context:
-                    self.logger.info(f"[RAGPipeline] Injecting conversation history for user {user_id}")
+                    self.logger.info("Injecting conversation history")
 
             # Classificar + validar + recuperar — as três EM PARALELO
             # (classificador dedicado é mais preciso; paralelizar esconde o custo sob a recuperação)
-            classify_task = asyncio.create_task(self.classifier.execute(query))
             validate_task = asyncio.create_task(self.validator.execute(query, history_context))
             retrieve_task = asyncio.create_task(self.rag_agent.retrieve(query, history_context))
-            classification_raw, validation, retr = await asyncio.gather(classify_task, validate_task, retrieve_task)
-
-            classification = mode or classification_raw
+            if mode is None:
+                classify_task = asyncio.create_task(self.classifier.execute(query))
+                classification, validation, retr = await asyncio.gather(
+                    classify_task, validate_task, retrieve_task
+                )
+            else:
+                validation, retr = await asyncio.gather(validate_task, retrieve_task)
+                classification = mode
 
             # Override por evidência da recuperação: se o validator disse "fora" mas
             # a busca trouxe chunks fortes, é um falso positivo do validator.
@@ -73,9 +76,7 @@ class RAGPipeline:
             chunks_recuperados = retr.get("chunks_used", 0)
             score_recuperacao = retr.get("score", 0.0)
             override_retrieval = (
-                not dentro_validator
-                and chunks_recuperados >= 5
-                and score_recuperacao >= 0.20
+                not dentro_validator and chunks_recuperados >= 5 and score_recuperacao >= 0.20
             )
             dentro_escopo = dentro_validator or override_retrieval
 
@@ -85,7 +86,9 @@ class RAGPipeline:
                     f"chunks (score={score_recuperacao:.3f}). Override: tratando como DENTRO."
                 )
 
-            self.logger.info(f"[RAGPipeline] modo={classification}, escopo={dentro_escopo} (validator={dentro_validator})")
+            self.logger.info(
+                f"[RAGPipeline] modo={classification}, escopo={dentro_escopo} (validator={dentro_validator})"
+            )
 
             # Fora do escopo de verdade (validator E retrieval concordam): retorna sem gerar
             if not dentro_escopo:
@@ -95,15 +98,16 @@ class RAGPipeline:
                     mode="orientacao",
                     score=0.0,
                     chunks_used=0,
-                    processing_time_ms=int((time() - start_time) * 1000)
+                    processing_time_ms=int((time() - start_time) * 1000),
                 )
                 self.logger.info("[RAGPipeline] Query out of scope, returning early")
                 return response
 
             # Geração (precisa do modo + documentos recuperados)
-            formatted = await self.rag_agent.generate(
+            generated = await self.rag_agent.generate(
                 query, retr["documents"], classification, history_context
             )
+            formatted = await self.formatter.execute(generated, classification)
 
             processing_time_ms = int((time() - start_time) * 1000)
 
@@ -112,10 +116,10 @@ class RAGPipeline:
                 mode=classification,
                 score=retr.get("score", 0.0),
                 chunks_used=retr.get("chunks_used", 0),
-                processing_time_ms=processing_time_ms
+                processing_time_ms=processing_time_ms,
             )
 
-            interaction_id = await self.history.save_interaction(
+            interaction_id = await self._save_history(
                 user_id=user_id,
                 pergunta=query,
                 resposta=formatted,
@@ -125,33 +129,64 @@ class RAGPipeline:
                 processing_time_ms=processing_time_ms,
                 pergunta_reescrita=retr.get("search_query"),
                 fontes=retr.get("fontes"),
-                canal=canal
+                canal=canal,
             )
             response.interaction_id = interaction_id
 
             self.logger.info(f"[RAGPipeline] Completed pipeline in {processing_time_ms}ms")
             return response
 
-        except Exception as e:
-            self.logger.error(f"[RAGPipeline] Error in pipeline: {str(e)}")
+        except Exception:
+            self.logger.exception("RAG pipeline failed")
             processing_time_ms = int((time() - start_time) * 1000)
 
             error_response = QueryResponse(
-                response=f"Erro ao processar pergunta: {str(e)}",
+                response="Não foi possível processar a pergunta agora. Tente novamente em instantes.",
                 mode="orientacao",
                 score=0.0,
                 chunks_used=0,
-                processing_time_ms=processing_time_ms
+                processing_time_ms=processing_time_ms,
             )
 
-            await self.history.save_interaction(
+            await self._save_history(
                 user_id=user_id,
                 pergunta=query,
                 resposta=error_response.response,
                 modo="orientacao",
                 score=0.0,
                 chunks_used=0,
-                processing_time_ms=processing_time_ms
+                processing_time_ms=processing_time_ms,
             )
 
             return error_response
+
+    async def _save_history(
+        self,
+        user_id: str,
+        pergunta: str,
+        resposta: str,
+        modo: Mode = "orientacao",
+        score: float = 0.0,
+        chunks_used: int = 0,
+        processing_time_ms: int = 0,
+        pergunta_reescrita: str | None = None,
+        fontes: list[Any] | None = None,
+        canal: str | None = None,
+    ) -> str | None:
+        """History is best-effort and must never replace a valid RAG response."""
+        try:
+            return await self.history.save_interaction(
+                user_id=user_id,
+                pergunta=pergunta,
+                resposta=resposta,
+                modo=modo,
+                score=score,
+                chunks_used=chunks_used,
+                processing_time_ms=processing_time_ms,
+                pergunta_reescrita=pergunta_reescrita,
+                fontes=fontes,
+                canal=canal,
+            )
+        except Exception:
+            self.logger.exception("History persistence failed")
+            return None

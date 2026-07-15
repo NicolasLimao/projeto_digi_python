@@ -1,152 +1,112 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
 from src.agents.rag_agent import RAGAgent
-from src.services.openai_service import OpenAIService
-from src.services.supabase_service import SupabaseService
+from src.config import Settings
 from src.models.schemas import Document
 
 
 @pytest.fixture
-def mock_openai_service():
-    """Mock OpenAI service"""
-    service = MagicMock(spec=OpenAIService)
-    service.get_embeddings = AsyncMock(return_value=[0.1] * 1536)
-    service.generate_response = AsyncMock(return_value="Test response")
-    service.format_response = AsyncMock(return_value="Formatted response")
-    return service
+def documents() -> list[Document]:
+    return [
+        Document(id="1", content="backup", embedding=[], metadata={"fonte": "manual"}, score=0.9),
+        Document(id="2", content="restore", embedding=[], metadata={"fonte": "faq"}, score=0.7),
+    ]
 
 
 @pytest.fixture
-def mock_supabase_service():
-    """Mock Supabase service"""
-    service = MagicMock(spec=SupabaseService)
-
-    doc1 = Document(
-        id="doc_1",
-        content="Backup content",
-        embedding=[0.1] * 1536,
-        metadata={"fonte": "manual"},
-        score=0.9
-    )
-    doc2 = Document(
-        id="doc_2",
-        content="Restore content",
-        embedding=[0.1] * 1536,
-        metadata={"fonte": "faq"},
-        score=0.7
-    )
-
-    service.search_hybrid = AsyncMock(return_value=[doc1, doc2])
-    return service
+def services(documents):
+    openai = MagicMock()
+    openai.get_embeddings = AsyncMock(return_value=[0.1] * 4)
+    openai.rewrite_query = AsyncMock(side_effect=lambda query, history="": query)
+    openai.rerank = AsyncMock(side_effect=lambda query, chunks, top_n=10: chunks[:top_n])
+    openai.generate_response = AsyncMock(return_value="Resposta")
+    openai.format_response = AsyncMock(side_effect=lambda response, mode: response.strip())
+    supabase = MagicMock()
+    supabase.search_hybrid = AsyncMock(return_value=documents)
+    return openai, supabase
 
 
 @pytest.fixture
-def rag_agent(mock_openai_service, mock_supabase_service):
-    """RAGAgent with mocked services"""
-    return RAGAgent(mock_openai_service, mock_supabase_service)
+def rag_agent(services):
+    return RAGAgent(*services)
 
 
 @pytest.mark.asyncio
-async def test_execute_returns_dict(rag_agent):
-    """Test RAGAgent.execute returns a dictionary"""
-    result = await rag_agent.execute(query="How to backup?")
-
-    assert isinstance(result, dict)
-    assert "response" in result
-    assert "score" in result
-    assert "chunks_used" in result
-    assert "mode" in result
+async def test_retrieve_builds_metrics_and_sources(rag_agent):
+    result = await rag_agent.retrieve("Como fazer backup?", k=10)
+    assert result["chunks_used"] == 2
+    assert result["score"] == pytest.approx(0.8)
+    assert result["fontes"] == ["manual", "faq"]
 
 
 @pytest.mark.asyncio
-async def test_execute_calls_get_embeddings(rag_agent, mock_openai_service):
-    """Test execute calls get_embeddings"""
-    await rag_agent.execute(query="test")
-
-    mock_openai_service.get_embeddings.assert_called_once()
-
-
-@pytest.mark.asyncio
-async def test_execute_calls_search_hybrid(rag_agent, mock_supabase_service):
-    """Test execute calls search_hybrid with embeddings"""
-    await rag_agent.execute(query="test")
-
-    mock_supabase_service.search_hybrid.assert_called_once()
-    call_args = mock_supabase_service.search_hybrid.call_args
-    assert "embedding" in call_args.kwargs
+async def test_retrieve_expands_candidate_pool(rag_agent, services):
+    await rag_agent.retrieve("teste", k=3)
+    _, supabase = services
+    assert supabase.search_hybrid.await_args.kwargs["k"] == 8
 
 
 @pytest.mark.asyncio
-async def test_execute_respects_k_limit(rag_agent, mock_supabase_service):
-    """Test execute passes k parameter to search_hybrid"""
-    await rag_agent.execute(query="test", k=3)
-
-    call_args = mock_supabase_service.search_hybrid.call_args
-    assert call_args.kwargs.get("k") == 3
+async def test_retrieve_caps_final_results(rag_agent, services, documents):
+    openai, _ = services
+    await rag_agent.retrieve("teste", k=1)
+    assert openai.rerank.await_args.kwargs["top_n"] == 1
 
 
 @pytest.mark.asyncio
-async def test_execute_calculates_average_score(rag_agent):
-    """Test execute calculates average similarity score"""
-    result = await rag_agent.execute(query="test")
-
-    assert result["score"] == pytest.approx((0.9 + 0.7) / 2, 0.01)
+async def test_retrieve_uses_injected_limits_and_threshold(services):
+    openai, supabase = services
+    config = Settings(max_chunks=2, score_threshold=0.65)
+    agent = RAGAgent(openai, supabase, config)
+    await agent.retrieve("teste", k=10)
+    assert openai.rerank.await_args.kwargs["top_n"] == 2
+    assert supabase.search_hybrid.await_args.kwargs["score_threshold"] == 0.65
 
 
 @pytest.mark.asyncio
-async def test_execute_counts_chunks(rag_agent):
-    """Test execute counts retrieved chunks"""
-    result = await rag_agent.execute(query="test")
+async def test_rewrite_is_skipped_for_simple_query(rag_agent, services):
+    openai, _ = services
+    await rag_agent.retrieve("backup")
+    openai.rewrite_query.assert_not_awaited()
 
+
+@pytest.mark.asyncio
+async def test_rewrite_is_used_for_followup(rag_agent, services):
+    openai, _ = services
+    await rag_agent.retrieve("e isso?", history_context="pergunta anterior")
+    openai.rewrite_query.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_generate_uses_documents_and_mode(rag_agent, services, documents):
+    result = await rag_agent.generate("pergunta", documents, "bug", "histórico")
+    openai, _ = services
+    assert result == "Resposta"
+    assert openai.generate_response.await_args.args[2] == "bug"
+
+
+@pytest.mark.asyncio
+async def test_generate_without_documents_returns_safe_message(rag_agent, services):
+    result = await rag_agent.generate("desconhecido", [], "orientacao")
+    openai, _ = services
+    assert "não encontrei" in result
+    openai.generate_response.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_execute_returns_compatibility_payload(rag_agent):
+    result = await rag_agent.execute("backup", mode="resposta-cliente")
+    assert result["response"] == "Resposta"
+    assert result["mode"] == "resposta-cliente"
     assert result["chunks_used"] == 2
 
 
 @pytest.mark.asyncio
-async def test_execute_with_no_results(rag_agent, mock_supabase_service):
-    """Test execute handles no search results"""
-    mock_supabase_service.search_hybrid.return_value = []
-
-    result = await rag_agent.execute(query="unknown topic")
-
+async def test_execute_hides_internal_exception(rag_agent, services):
+    openai, _ = services
+    openai.get_embeddings.side_effect = RuntimeError("secret internal detail")
+    result = await rag_agent.execute("backup")
+    assert "secret internal detail" not in result["response"]
     assert result["score"] == 0.0
-    assert result["chunks_used"] == 0
-    # Response is formatted through formatter agent
-    assert isinstance(result["response"], str)
-
-
-@pytest.mark.asyncio
-async def test_execute_handles_exception(rag_agent, mock_openai_service):
-    """Test execute handles exceptions gracefully"""
-    mock_openai_service.get_embeddings.side_effect = Exception("API Error")
-
-    result = await rag_agent.execute(query="test")
-
-    assert "Erro" in result["response"]
-    assert result["score"] == 0.0
-    assert result["chunks_used"] == 0
-
-
-@pytest.mark.asyncio
-async def test_execute_includes_mode(rag_agent):
-    """Test execute result includes requested mode"""
-    result = await rag_agent.execute(query="test", mode="resposta-cliente")
-
-    assert result["mode"] == "resposta-cliente"
-
-
-@pytest.mark.asyncio
-async def test_execute_calls_generate_response_with_chunks(rag_agent, mock_openai_service):
-    """Test generate_response receives retrieved documents"""
-    await rag_agent.execute(query="test")
-
-    mock_openai_service.generate_response.assert_called_once()
-    call_args = mock_openai_service.generate_response.call_args
-    assert len(call_args[0][1]) == 2  # Two documents passed
-
-
-@pytest.mark.asyncio
-async def test_execute_uses_rag_mode(rag_agent):
-    """Test execute uses correct mode"""
-    result = await rag_agent.execute(query="test", mode="resposta-cliente")
-
-    assert result["mode"] == "resposta-cliente"

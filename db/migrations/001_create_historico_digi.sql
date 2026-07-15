@@ -8,7 +8,11 @@ CREATE TABLE historico_digi (
   score FLOAT DEFAULT 0 CHECK (score >= 0 AND score <= 1),
   chunks_used INT DEFAULT 0,
   processing_time_ms INT DEFAULT 0,
-  timestamp TIMESTAMP DEFAULT NOW()
+  pergunta_reescrita TEXT,
+  fontes JSONB,
+  canal TEXT,
+  feedback TEXT CHECK (feedback IS NULL OR feedback IN ('positivo', 'negativo')),
+  timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Create index for fast user_id lookups
@@ -17,6 +21,6 @@ CREATE INDEX idx_historico_user_id ON historico_digi(user_id, timestamp DESC);
 -- Enable RLS (Row Level Security) - Required for production data protection
 ALTER TABLE historico_digi ENABLE ROW LEVEL SECURITY;
 
--- Create policy for authenticated access (adjust based on your auth model)
-CREATE POLICY "Allow service role full access" ON historico_digi
-  USING (true) WITH CHECK (true);
+-- Access is server-side only. service_role bypasses RLS; public roles receive
+-- no direct table privileges.
+REVOKE ALL ON TABLE historico_digi FROM anon, authenticated;

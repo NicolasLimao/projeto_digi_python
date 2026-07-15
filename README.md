@@ -6,6 +6,44 @@ Construído end-to-end: arquitetura RAG (Retrieval-Augmented Generation) em Pyth
 
 ---
 
+## Início rápido seguro
+
+Requer Python 3.12. O projeto aceita inicialização local sem credenciais para health checks e testes, mas falha imediatamente em produção se faltarem segredos obrigatórios.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements-dev.lock
+cp .env.example .env
+pytest -q
+python main.py
+```
+
+Em `ENVIRONMENT=production`, configure `OPENAI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` e `API_AUTH_TOKEN`. Toda chamada para `/api/*` deve enviar:
+
+```http
+X-API-Key: <API_AUTH_TOKEN>
+```
+
+Os endpoints `/health`, `/ready` e `/` são públicos. `/ready` verifica configuração; não executa uma chamada de conectividade aos provedores externos. A documentação OpenAPI fica disponível em desenvolvimento e é desativada em produção.
+
+Antes do primeiro deploy, execute as migrações em `db/migrations/` na ordem numérica. Em instalações existentes, faça backup e revise dados incompatíveis antes de validar as novas constraints.
+
+### Verificações locais
+
+```bash
+ruff check .
+ruff format --check .
+mypy src main.py
+pytest -q
+bandit -q -r src main.py -c pyproject.toml
+pip-audit -r requirements.lock --progress-spinner off
+```
+
+Consulte também [SECURITY.md](SECURITY.md), [AGENTS.md](AGENTS.md) e o [relatório da auditoria](AUDIT_REPORT.md).
+
+---
+
 ## O problema
 
 Analistas de suporte N1 perdem tempo significativo buscando informações na documentação ou escalando dúvidas que poderiam ser resolvidas com acesso rápido ao manual. Cada escalação desnecessária atrasa o atendimento ao cliente final e custa tempo do time de N2.
@@ -91,9 +129,9 @@ As três tarefas iniciais (classify, validate, retrieve) executam concorrentemen
 
 ## Otimização de latência
 
-Pipeline inicial: aproximadamente **15 segundos** por resposta (cinco chamadas sequenciais ao modelo).
+No histórico do projeto, o pipeline inicial foi medido em aproximadamente **15 segundos** por resposta (cinco chamadas sequenciais ao modelo).
 
-Após paralelização das tarefas independentes via `asyncio.gather` e introdução do gate condicional na reescrita: aproximadamente **10 segundos** — redução de 34% sem perda de qualidade, validada por teste comparativo em conjunto fixo de perguntas (before/after).
+Após paralelização das tarefas independentes via `asyncio.gather` e introdução do gate condicional na reescrita, o projeto registrou aproximadamente **10 segundos** — redução reportada de 34%. Esses números são históricos e devem ser revalidados no ambiente atual com um conjunto de avaliação versionado.
 
 Próxima fronteira identificada: substituir o reranker baseado em LLM (~2,5s) por um cross-encoder local (~200ms) usando PyTorch e Transformers.
 
@@ -113,7 +151,9 @@ Próxima fronteira identificada: substituir o reranker baseado em LLM (~2,5s) po
 
 ---
 
-## Métricas em produção
+## Métricas históricas declaradas
+
+Os valores abaixo vieram da documentação original e não foram independentemente verificados nesta auditoria:
 
 - **1.099 chunks** indexados a partir do manual oficial da plataforma (720 páginas)
 - **102 interações reais**, **14 usuários distintos**
@@ -129,16 +169,22 @@ Próxima fronteira identificada: substituir o reranker baseado em LLM (~2,5s) po
 ```
 projeto_digi_python/        (este repositorio)
 ├── main.py                 ponto de entrada FastAPI
+├── pyproject.toml          configuração de qualidade e pacote
+├── AGENTS.md               invariantes para manutenção assistida
+├── SECURITY.md             política e checklist de deploy
 ├── src/
-│   ├── api/                endpoints (rag, ingest, history, feedback)
+│   ├── app.py              factory, lifespan e middlewares
+│   ├── api/                endpoints, autenticação e dependências
 │   ├── pipeline/           orquestrador do fluxo RAG
 │   ├── agents/             classifier, scope_validator, rag_agent, formatter
 │   ├── services/           openai, supabase, history, ingestion
 │   └── models/             contratos Pydantic
-├── sql/                    migracoes e views de analytics
-├── requirements.txt
+├── db/migrations/          migrações ordenadas e endurecimento de RLS
+├── tests/                  testes unitários, API e integração local
+├── requirements*.lock      ambientes reproduzíveis
+├── .github/workflows/      CI de qualidade e segurança
 ├── squarecloud.app         configuracao de deploy
-└── DOCUMENTACAO.md         documentacao tecnica detalhada
+└── AUDIT_REPORT.md         achados, correções e recomendações
 ```
 
 Bot Discord em repositório separado: [github.com/NicolasLimao/digi-bot](https://github.com/NicolasLimao/digi-bot)

@@ -61,3 +61,11 @@ from public.historico_digi
 where user_id ~ '^[0-9]+$'
 group by modo
 order by interacoes desc;
+
+-- These views expose conversation and feedback data. They are backend-only;
+-- service_role bypasses RLS while public client roles receive no privileges.
+revoke all on public.v_feedback_resumo from anon, authenticated;
+revoke all on public.v_volume_diario from anon, authenticated;
+revoke all on public.v_negativos from anon, authenticated;
+revoke all on public.v_por_canal from anon, authenticated;
+revoke all on public.v_por_modo from anon, authenticated;

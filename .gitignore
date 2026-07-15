@@ -9,9 +9,13 @@ __pycache__/
 *$py.class
 *.egg-info/
 .venv/
+.venv2/
 venv/
 .pytest_cache/
 .mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
 # Node
 node_modules/
@@ -45,3 +49,4 @@ run.ps1
 .DS_Store
 Thumbs.db
 .vscode/
+.idea/

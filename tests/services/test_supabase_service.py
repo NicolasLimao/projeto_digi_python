@@ -1,120 +1,73 @@
+from types import SimpleNamespace
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock
-from src.services.supabase_service import SupabaseService
-from src.models.schemas import Document
 
-
-@pytest.fixture
-def supabase_service_with_credentials():
-    """SupabaseService with test credentials"""
-    return SupabaseService(url="https://test.supabase.co", key="test-key")
-
-
-@pytest.fixture
-def supabase_service_without_credentials():
-    """SupabaseService without credentials (fallback to mock)"""
-    return SupabaseService(url="", key="")
+from src.services.supabase_service import SupabaseService, SupabaseServiceError
 
 
 @pytest.mark.asyncio
-async def test_save_document_without_credentials(supabase_service_without_credentials):
-    """Test save_document returns mock ID without Supabase"""
-    doc_id = await supabase_service_without_credentials.save_document(
-        content="Test content",
-        embedding=[0.1] * 1536,
-        metadata={"fonte": "test"}
+@pytest.mark.parametrize("method", ["save_document", "search_hybrid", "get_document"])
+async def test_operations_require_configuration(method: str):
+    service = SupabaseService()
+    with pytest.raises(SupabaseServiceError, match="not configured"):
+        if method == "save_document":
+            await service.save_document("content", [0.1], {})
+        elif method == "search_hybrid":
+            await service.search_hybrid([0.1], "query")
+        else:
+            await service.get_document("id")
+
+
+@pytest.mark.asyncio
+async def test_search_hybrid_filters_and_normalizes_results():
+    client = MagicMock()
+    client.rpc.return_value.execute.return_value = SimpleNamespace(
+        data=[
+            {"id": "1", "content": "alto", "score": 0.8, "metadata": {"fonte": "manual"}},
+            {"id": "2", "content": "baixo", "score": 0.1, "metadata": {}},
+        ]
     )
-
-    assert doc_id.startswith("doc_")
-    assert isinstance(doc_id, str)
-
-
-@pytest.mark.asyncio
-async def test_search_hybrid_without_credentials(supabase_service_without_credentials):
-    """Test search_hybrid returns mock documents without Supabase"""
-    documents = await supabase_service_without_credentials.search_hybrid(
-        embedding=[0.1] * 1536,
-        query="backup",
-        k=5
+    documents = await SupabaseService(client=client).search_hybrid(
+        [0.1], "backup", k=5, score_threshold=0.3
     )
-
-    assert isinstance(documents, list)
-    assert len(documents) == 3
-    assert all(isinstance(doc, Document) for doc in documents)
-    assert all(hasattr(doc, "content") for doc in documents)
+    assert [document.id for document in documents] == ["1"]
+    assert documents[0].score == 0.8
+    assert client.rpc.call_args.args[0] == "match_documents_hybrid"
 
 
 @pytest.mark.asyncio
-async def test_search_hybrid_returns_documents(supabase_service_without_credentials):
-    """Test search_hybrid returns documents"""
-    documents = await supabase_service_without_credentials.search_hybrid(
-        embedding=[0.1] * 1536,
-        query="test",
-        k=5
+async def test_save_document_returns_database_id():
+    client = MagicMock()
+    client.table.return_value.insert.return_value.execute.return_value = SimpleNamespace(
+        data=[{"id": "doc-1"}]
     )
-
-    assert isinstance(documents, list)
-    assert len(documents) > 0
+    result = await SupabaseService(client=client).save_document("content", [0.1], {"fonte": "x"})
+    assert result == "doc-1"
 
 
 @pytest.mark.asyncio
-async def test_search_hybrid_includes_score(supabase_service_without_credentials):
-    """Test search_hybrid documents include similarity score"""
-    documents = await supabase_service_without_credentials.search_hybrid(
-        embedding=[0.1] * 1536,
-        query="test",
-        k=5
+async def test_save_document_returns_none_when_database_returns_no_row():
+    client = MagicMock()
+    client.table.return_value.insert.return_value.execute.return_value = SimpleNamespace(data=[])
+    assert await SupabaseService(client=client).save_document("content", [0.1], {}) is None
+
+
+@pytest.mark.asyncio
+async def test_get_document_returns_typed_document():
+    client = MagicMock()
+    client.table.return_value.select.return_value.eq.return_value.execute.return_value = (
+        SimpleNamespace(data=[{"id": "d1", "content": "texto", "embedding": [0.1], "metadata": {}}])
     )
-
-    assert all(doc.score is not None for doc in documents)
-    assert all(0.0 <= doc.score <= 1.0 for doc in documents)
-
-
-@pytest.mark.asyncio
-async def test_get_document_without_credentials(supabase_service_without_credentials):
-    """Test get_document returns None without Supabase"""
-    document = await supabase_service_without_credentials.get_document("doc_123")
-
-    assert document is None
+    document = await SupabaseService(client=client).get_document("d1")
+    assert document is not None
+    assert document.id == "d1"
 
 
 @pytest.mark.asyncio
-async def test_search_hybrid_empty_query(supabase_service_without_credentials):
-    """Test search_hybrid with empty query"""
-    documents = await supabase_service_without_credentials.search_hybrid(
-        embedding=[0.1] * 1536,
-        query="",
-        k=5
+async def test_get_document_returns_none_for_missing_row():
+    client = MagicMock()
+    client.table.return_value.select.return_value.eq.return_value.execute.return_value = (
+        SimpleNamespace(data=[])
     )
-
-    assert isinstance(documents, list)
-
-
-@pytest.mark.asyncio
-async def test_document_structure(supabase_service_without_credentials):
-    """Test returned documents have correct structure"""
-    documents = await supabase_service_without_credentials.search_hybrid(
-        embedding=[0.1] * 1536,
-        query="test",
-        k=1
-    )
-
-    doc = documents[0]
-    assert hasattr(doc, "id")
-    assert hasattr(doc, "content")
-    assert hasattr(doc, "embedding")
-    assert hasattr(doc, "metadata")
-    assert hasattr(doc, "score")
-
-
-@pytest.mark.asyncio
-async def test_save_document_returns_string_id(supabase_service_without_credentials):
-    """Test save_document returns string ID"""
-    doc_id = await supabase_service_without_credentials.save_document(
-        content="test",
-        embedding=[0.1] * 1536,
-        metadata={}
-    )
-
-    assert isinstance(doc_id, str)
-    assert len(doc_id) > 0
+    assert await SupabaseService(client=client).get_document("missing") is None

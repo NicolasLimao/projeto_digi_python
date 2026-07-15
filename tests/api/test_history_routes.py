@@ -1,10 +1,11 @@
 import pytest
+
 from src.api.history_routes import router
 from src.models.schemas import HistoryContextRequest
 
-
 # These tests are templates for integration testing with FastAPI
 # Full integration testing requires app fixture setup
+
 
 @pytest.mark.asyncio
 async def test_history_router_imported():

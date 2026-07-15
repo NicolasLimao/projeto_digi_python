@@ -1,145 +1,115 @@
-from typing import List, Dict, Any, Optional
+import asyncio
+from typing import Any
+
 from supabase import create_client
+
 from src.logger import get_logger
 from src.models.schemas import Document
-import json
 
 logger = get_logger(__name__)
 
 
+class SupabaseServiceError(RuntimeError):
+    pass
+
+
 class SupabaseService:
-    def __init__(self, url: str, key: str):
+    def __init__(self, url: str = "", key: str = "", client: Any = None):
         self.url = url
-        self.key = key
-        try:
-            self.client = create_client(url, key) if url and key else None
-        except Exception as e:
-            logger.warning(f"[SupabaseService] Failed to create Supabase client: {str(e)}")
-            self.client = None
+        self.client = client
+        if self.client is None and url and key:
+            try:
+                self.client = create_client(url, key)
+            except Exception as exc:
+                raise SupabaseServiceError("Could not initialize Supabase client") from exc
 
-    async def save_document(self, content: str, embedding: List[float], metadata: Dict[str, Any]) -> str:
-        """Save document with embedding to Supabase"""
-        logger.info(f"[SupabaseService] Saving document: {metadata.get('fonte', 'unknown')}")
+    def _require_client(self) -> Any:
+        if self.client is None:
+            raise SupabaseServiceError("Supabase is not configured")
+        return self.client
 
-        if not self.client:
-            logger.warning("[SupabaseService] No Supabase client, using mock doc_id")
-            return f"doc_{hash(content) % 10000}"
-
-        try:
-            data = {
-                "content": content,
-                "embedding": embedding,
-                "metadata": metadata,
-                "fonte": metadata.get("fonte", "ingestion")
-            }
-
-            response = self.client.table("documents").insert(data).execute()
-
-            if response.data:
-                doc_id = response.data[0].get("id")
-                logger.info(f"[SupabaseService] Document saved with ID: {doc_id}")
-                return str(doc_id)
-            else:
-                logger.error("[SupabaseService] Save returned no data")
-                return f"doc_{hash(content) % 10000}"
-
-        except Exception as e:
-            logger.error(f"[SupabaseService] Error saving document: {str(e)}")
-            return f"doc_{hash(content) % 10000}"
-
-    async def search_hybrid(self, embedding: List[float], query: str, k: int = 10, score_threshold: float = 0.0) -> List[Document]:
-        """Perform hybrid (semantic + full-text) search on Supabase"""
-        logger.info(f"[SupabaseService] Searching hybrid for: {query[:50]}... (k={k}, threshold={score_threshold})")
-
-        if not self.client:
-            logger.warning("[SupabaseService] No Supabase client, returning mock results")
-            mock_chunks = [
-                {
-                    "id": "chunk_1",
-                    "content": "Como fazer backup: Acesse Configurações > Backup > Iniciar backup",
-                    "embedding": embedding,
-                    "score": 0.85,
-                    "metadata": {"fonte": "manual"}
-                },
-                {
-                    "id": "chunk_2",
-                    "content": "O backup pode levar até 30 minutos dependendo do volume",
-                    "embedding": embedding,
-                    "score": 0.72,
-                    "metadata": {"fonte": "faq"}
-                },
-                {
-                    "id": "chunk_3",
-                    "content": "Todos os dados são criptografados durante o backup",
-                    "embedding": embedding,
-                    "score": 0.65,
-                    "metadata": {"fonte": "segurança"}
-                },
-            ]
-            return [Document(**chunk) for chunk in mock_chunks]
+    async def save_document(
+        self,
+        content: str,
+        embedding: list[float],
+        metadata: dict[str, Any],
+    ) -> str | None:
+        client = self._require_client()
+        data = {
+            "content": content,
+            "embedding": embedding,
+            "metadata": metadata,
+            "fonte": metadata.get("fonte", "ingestion"),
+        }
 
         try:
-            response = self.client.rpc(
-                "match_documents_hybrid",
-                {
-                    "query_text": query,
-                    "query_embedding": str(embedding),
-                    "match_count": k,
-                    "full_text_weight": 0.5,
-                    "semantic_weight": 0.5
-                }
-            ).execute()
+            response = await asyncio.to_thread(
+                lambda: client.table("documents").insert(data).execute()
+            )
+        except Exception as exc:
+            logger.exception("Supabase document insert failed")
+            raise SupabaseServiceError("Document storage failed") from exc
+        return str(response.data[0]["id"]) if response.data else None
 
-            logger.info(f"[SupabaseService] RPC returned {len(response.data) if response.data else 0} raw results")
-
-            documents = []
-            if response.data:
-                for idx, item in enumerate(response.data):
-                    score = item.get("score", 0.0)
-                    logger.debug(f"[SupabaseService] Result {idx}: score={score}, content={item.get('content', '')[:50]}")
-                    if score >= score_threshold:
-                        doc = Document(
-                            id=item.get("id", f"chunk_{idx}"),
-                            content=item.get("content"),
-                            embedding=item.get("embedding", embedding),
-                            metadata=item.get("metadata", {}),
-                            score=score
-                        )
-                        documents.append(doc)
-
-            logger.info(f"[SupabaseService] Found {len(documents)} documents after filtering (threshold={score_threshold})")
-            return documents
-
-        except Exception as e:
-            logger.error(f"[SupabaseService] Error searching hybrid: {str(e)}")
-            return []
-
-    async def get_document(self, doc_id: str) -> Optional[Document]:
-        """Get a single document by ID"""
-        logger.info(f"[SupabaseService] Getting document: {doc_id}")
-
-        if not self.client:
-            logger.warning("[SupabaseService] No Supabase client, returning None")
-            return None
-
+    async def search_hybrid(
+        self,
+        embedding: list[float],
+        query: str,
+        k: int = 10,
+        score_threshold: float = 0.0,
+    ) -> list[Document]:
+        client = self._require_client()
+        params = {
+            "query_text": query,
+            "query_embedding": str(embedding),
+            "match_count": k,
+            "full_text_weight": 0.5,
+            "semantic_weight": 0.5,
+        }
         try:
-            response = self.client.table("documents").select("*").eq("id", doc_id).execute()
+            response = await asyncio.to_thread(
+                lambda: client.rpc("match_documents_hybrid", params).execute()
+            )
+        except Exception as exc:
+            logger.exception("Supabase hybrid search failed")
+            raise SupabaseServiceError("Knowledge-base search failed") from exc
 
-            if response.data:
-                item = response.data[0]
-                doc = Document(
-                    id=item.get("id"),
-                    content=item.get("content"),
-                    embedding=item.get("embedding"),
-                    metadata=item.get("metadata", {}),
-                    score=item.get("score")
+        documents: list[Document] = []
+        for index, item in enumerate(response.data or []):
+            score = float(item.get("score") or 0.0)
+            if score < score_threshold:
+                continue
+            documents.append(
+                Document(
+                    id=str(item.get("id", f"chunk_{index}")),
+                    content=str(item.get("content") or ""),
+                    embedding=item.get("embedding") or embedding,
+                    metadata=item.get("metadata") or {},
+                    score=min(max(score, 0.0), 1.0),
                 )
-                logger.info(f"[SupabaseService] Retrieved document: {doc_id}")
-                return doc
-            else:
-                logger.warning(f"[SupabaseService] Document not found: {doc_id}")
-                return None
+            )
+        logger.info(
+            "Hybrid search completed",
+            extra={"extras": {"candidates": len(response.data or []), "accepted": len(documents)}},
+        )
+        return documents
 
-        except Exception as e:
-            logger.error(f"[SupabaseService] Error getting document: {str(e)}")
+    async def get_document(self, doc_id: str) -> Document | None:
+        client = self._require_client()
+        try:
+            response = await asyncio.to_thread(
+                lambda: client.table("documents").select("*").eq("id", doc_id).execute()
+            )
+        except Exception as exc:
+            logger.exception("Supabase document read failed")
+            raise SupabaseServiceError("Document read failed") from exc
+        if not response.data:
             return None
+        item = response.data[0]
+        return Document(
+            id=str(item["id"]),
+            content=str(item.get("content") or ""),
+            embedding=item.get("embedding") or [],
+            metadata=item.get("metadata") or {},
+            score=item.get("score"),
+        )

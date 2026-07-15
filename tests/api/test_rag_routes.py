@@ -1,231 +1,122 @@
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from fastapi.testclient import TestClient
-from unittest.mock import AsyncMock, MagicMock, patch
-from src.api.rag_routes import router
-from src.models.schemas import QueryRequest, QueryResponse
 from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from src.api.rag_routes import get_rag_pipeline, router
+from src.config import Settings, get_settings
+from src.models.schemas import QueryResponse
 
 
 @pytest.fixture
-def app():
-    """FastAPI test app with RAG router"""
-    app = FastAPI()
-    app.include_router(router)
-    return app
+def pipeline():
+    service = MagicMock()
+    service.process = AsyncMock(
+        return_value=QueryResponse(
+            response="Resposta",
+            mode="orientacao",
+            score=0.75,
+            chunks_used=2,
+            processing_time_ms=25,
+            interaction_id="id-1",
+        )
+    )
+    return service
+
+
+@pytest.fixture
+def app(pipeline):
+    application = FastAPI()
+    application.include_router(router)
+    application.dependency_overrides[get_settings] = lambda: Settings(environment="test")
+    application.dependency_overrides[get_rag_pipeline] = lambda: pipeline
+    return application
 
 
 @pytest.fixture
 def client(app):
-    """Test client"""
     return TestClient(app)
 
 
-@pytest.mark.asyncio
-async def test_rag_query_endpoint_exists(client):
-    """Test RAG query endpoint is available"""
+def test_query_returns_typed_response(client, pipeline):
+    response = client.post(
+        "/api/rag/query", params={"user_id": "user-1"}, json={"query": "Como configurar?"}
+    )
+    assert response.status_code == 200
+    assert response.json()["chunks_used"] == 2
+    pipeline.process.assert_awaited_once()
+
+
+@pytest.mark.parametrize(
+    ("params", "body"),
+    [
+        ({}, {"query": "teste"}),
+        ({"user_id": ""}, {"query": "teste"}),
+        ({"user_id": "user"}, {}),
+        ({"user_id": "user"}, {"query": "   "}),
+        ({"user_id": "user"}, {"query": "teste", "mode": "invalid"}),
+    ],
+)
+def test_query_validation(client, params, body):
+    assert client.post("/api/rag/query", params=params, json=body).status_code == 422
+
+
+def test_query_forwards_explicit_mode_and_channel(client, pipeline):
     response = client.post(
         "/api/rag/query",
-        params={"user_id": "test_user"},
-        json={"query": "test query"}
+        params={"user_id": "user-1", "canal": "dm"},
+        json={"query": "Erro ao salvar", "mode": "bug"},
     )
+    assert response.status_code == 200
+    assert pipeline.process.await_args.args == ("Erro ao salvar", "user-1", "bug", "dm")
 
-    assert response.status_code in [200, 422, 500]
 
-
-def test_rag_query_missing_user_id(client):
-    """Test query endpoint requires user_id"""
+def test_extra_request_fields_are_rejected(client):
     response = client.post(
         "/api/rag/query",
-        json={"query": "test query"}
+        params={"user_id": "user"},
+        json={"query": "teste", "unexpected": True},
     )
-
     assert response.status_code == 422
 
 
-def test_rag_query_missing_query(client):
-    """Test query endpoint requires query in body"""
-    response = client.post(
-        "/api/rag/query",
-        params={"user_id": "test_user"},
-        json={}
+def test_configured_auth_token_is_required(pipeline):
+    application = FastAPI()
+    application.include_router(router)
+    application.dependency_overrides[get_settings] = lambda: Settings(
+        environment="test", api_auth_token="secret-token"
+    )
+    application.dependency_overrides[get_rag_pipeline] = lambda: pipeline
+    client = TestClient(application)
+
+    assert (
+        client.post("/api/rag/query", params={"user_id": "u"}, json={"query": "q"}).status_code
+        == 401
+    )
+    assert (
+        client.post(
+            "/api/rag/query",
+            params={"user_id": "u"},
+            json={"query": "q"},
+            headers={"X-API-Key": "wrong"},
+        ).status_code
+        == 401
+    )
+    assert (
+        client.post(
+            "/api/rag/query",
+            params={"user_id": "u"},
+            json={"query": "q"},
+            headers={"X-API-Key": "secret-token"},
+        ).status_code
+        == 200
     )
 
+
+def test_feedback_contract_rejects_invalid_value(client):
+    response = client.post(
+        "/api/rag/feedback",
+        json={"interaction_id": "id", "feedback": "talvez"},
+    )
     assert response.status_code == 422
-
-
-def test_rag_query_empty_query(client):
-    """Test query endpoint rejects empty query"""
-    with patch("src.api.rag_routes.get_rag_pipeline") as mock_pipeline:
-        pipeline_instance = AsyncMock()
-        pipeline_instance.process = AsyncMock(
-            return_value=QueryResponse(
-                response="Error",
-                mode="orientacao",
-                score=0.0,
-                chunks_used=0,
-                processing_time_ms=100
-            )
-        )
-        mock_pipeline.return_value = pipeline_instance
-
-        response = client.post(
-            "/api/rag/query",
-            params={"user_id": "test_user"},
-            json={"query": "   "}
-        )
-
-        assert response.status_code == 400
-
-
-def test_rag_query_empty_user_id(client):
-    """Test query endpoint rejects empty user_id"""
-    with patch("src.api.rag_routes.get_rag_pipeline") as mock_pipeline:
-        pipeline_instance = AsyncMock()
-        pipeline_instance.process = AsyncMock(
-            return_value=QueryResponse(
-                response="Error",
-                mode="orientacao",
-                score=0.0,
-                chunks_used=0,
-                processing_time_ms=100
-            )
-        )
-        mock_pipeline.return_value = pipeline_instance
-
-        response = client.post(
-            "/api/rag/query",
-            params={"user_id": ""},
-            json={"query": "test"}
-        )
-
-        assert response.status_code == 400
-
-
-def test_rag_query_response_structure(client):
-    """Test response has correct structure"""
-    with patch("src.api.rag_routes.get_rag_pipeline") as mock_pipeline:
-        pipeline_instance = AsyncMock()
-        pipeline_instance.process = AsyncMock(
-            return_value=QueryResponse(
-                response="Test response",
-                mode="orientacao",
-                score=0.85,
-                chunks_used=2,
-                processing_time_ms=150
-            )
-        )
-        mock_pipeline.return_value = pipeline_instance
-
-        response = client.post(
-            "/api/rag/query",
-            params={"user_id": "test_user"},
-            json={"query": "test query"}
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        assert "response" in data
-        assert "mode" in data
-        assert "score" in data
-        assert "chunks_used" in data
-        assert "processing_time_ms" in data
-
-
-def test_rag_query_with_mode(client):
-    """Test query endpoint accepts optional mode parameter"""
-    with patch("src.api.rag_routes.get_rag_pipeline") as mock_pipeline:
-        pipeline_instance = AsyncMock()
-        pipeline_instance.process = AsyncMock(
-            return_value=QueryResponse(
-                response="Response",
-                mode="resposta-cliente",
-                score=0.80,
-                chunks_used=1,
-                processing_time_ms=100
-            )
-        )
-        mock_pipeline.return_value = pipeline_instance
-
-        response = client.post(
-            "/api/rag/query",
-            params={"user_id": "test_user"},
-            json={"query": "test", "mode": "resposta-cliente"}
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["mode"] == "resposta-cliente"
-
-
-def test_rag_query_response_content_type(client):
-    """Test response content type is JSON"""
-    with patch("src.api.rag_routes.get_rag_pipeline") as mock_pipeline:
-        pipeline_instance = AsyncMock()
-        pipeline_instance.process = AsyncMock(
-            return_value=QueryResponse(
-                response="Test",
-                mode="orientacao",
-                score=0.0,
-                chunks_used=0,
-                processing_time_ms=0
-            )
-        )
-        mock_pipeline.return_value = pipeline_instance
-
-        response = client.post(
-            "/api/rag/query",
-            params={"user_id": "test_user"},
-            json={"query": "test"}
-        )
-
-        assert response.headers["content-type"] == "application/json"
-
-
-def test_rag_query_processing_time_positive(client):
-    """Test processing_time_ms is always positive"""
-    with patch("src.api.rag_routes.get_rag_pipeline") as mock_pipeline:
-        pipeline_instance = AsyncMock()
-        pipeline_instance.process = AsyncMock(
-            return_value=QueryResponse(
-                response="Response",
-                mode="orientacao",
-                score=0.5,
-                chunks_used=1,
-                processing_time_ms=250
-            )
-        )
-        mock_pipeline.return_value = pipeline_instance
-
-        response = client.post(
-            "/api/rag/query",
-            params={"user_id": "test_user"},
-            json={"query": "test"}
-        )
-
-        assert response.status_code == 200
-        assert response.json()["processing_time_ms"] >= 0
-
-
-def test_rag_query_score_in_range(client):
-    """Test score is between 0 and 1"""
-    with patch("src.api.rag_routes.get_rag_pipeline") as mock_pipeline:
-        pipeline_instance = AsyncMock()
-        pipeline_instance.process = AsyncMock(
-            return_value=QueryResponse(
-                response="Response",
-                mode="orientacao",
-                score=0.75,
-                chunks_used=2,
-                processing_time_ms=100
-            )
-        )
-        mock_pipeline.return_value = pipeline_instance
-
-        response = client.post(
-            "/api/rag/query",
-            params={"user_id": "test_user"},
-            json={"query": "test"}
-        )
-
-        data = response.json()
-        assert 0 <= data["score"] <= 1

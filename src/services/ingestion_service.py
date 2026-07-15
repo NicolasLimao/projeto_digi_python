@@ -1,236 +1,259 @@
-"""
-IngestionService: substitui o workflow de ingestão do n8n.
-Fluxo: recebe texto + anexos -> extrai (PyMuPDF / Mistral OCR fallback) -> chunka ->
-embedding em batch (OpenAI) -> insert em batch no Supabase via service_role.
-"""
-import re
-from datetime import datetime, timezone
-from typing import List, Optional, Dict, Any
+"""Secure document ingestion for text and Discord-hosted attachments."""
+
+import asyncio
+from datetime import UTC, datetime
+from typing import Any
+from urllib.parse import urlparse
+
 import httpx
-from supabase import create_client
 from openai import AsyncOpenAI
-from src.config import settings
+from supabase import create_client
+
+from src.config import Settings, get_settings
 from src.logger import get_logger
+from src.services.chunker import chunk_text
 
 logger = get_logger(__name__)
 
 PDF_MIMES = {"application/pdf"}
 TEXT_MIMES = {"text/plain", "text/markdown"}
-
-CHUNK_TARGET_SIZE = 1000     # chars por chunk (alvo)
-EMBED_BATCH = 100            # chunks por chamada de embedding
-INSERT_BATCH = 100           # rows por insert no Supabase
+EMBED_BATCH = 100
+INSERT_BATCH = 100
 
 
-# ---------------------------- Chunking ---------------------------- #
+class IngestionValidationError(ValueError):
+    pass
 
-def chunk_text(text: str, target_size: int = CHUNK_TARGET_SIZE) -> List[str]:
-    """Chunking por parágrafos, agregando até target_size chars.
-    Parágrafos muito longos são quebrados em sentenças."""
-    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
-    chunks: List[str] = []
-    current: List[str] = []
-    current_size = 0
-
-    for p in paragraphs:
-        if len(p) > target_size * 1.5:
-            if current:
-                chunks.append("\n\n".join(current))
-                current, current_size = [], 0
-            chunks.extend(_split_long_paragraph(p, target_size))
-            continue
-        if current_size + len(p) > target_size and current:
-            chunks.append("\n\n".join(current))
-            current, current_size = [p], len(p)
-        else:
-            current.append(p)
-            current_size += len(p) + 2
-
-    if current:
-        chunks.append("\n\n".join(current))
-    return chunks
-
-
-def _split_long_paragraph(p: str, target_size: int) -> List[str]:
-    sentences = re.split(r"(?<=[.!?])\s+", p)
-    out: List[str] = []
-    cur = ""
-    for s in sentences:
-        if len(cur) + len(s) > target_size and cur:
-            out.append(cur.strip())
-            cur = s
-        else:
-            cur = (cur + " " + s) if cur else s
-    if cur:
-        out.append(cur.strip())
-    return out or [p[:target_size]]
-
-
-# ---------------------------- Service ---------------------------- #
 
 class IngestionService:
-    def __init__(self):
-        self.openai = AsyncOpenAI(api_key=settings.openai_api_key) if settings.openai_api_key else None
-        sb_key = settings.supabase_service_role_key or settings.supabase_anon_key
-        self.supabase = create_client(settings.supabase_url, sb_key)
-        self.using_service_role = bool(settings.supabase_service_role_key)
-        self.mistral_key = settings.mistral_api_key
-        logger.info(f"[IngestionService] inicializado (service_role={self.using_service_role}, mistral={bool(self.mistral_key)})")
+    def __init__(
+        self,
+        config: Settings | None = None,
+        *,
+        openai_client: AsyncOpenAI | None = None,
+        supabase_client: Any = None,
+        http_client: httpx.AsyncClient | None = None,
+    ):
+        self.config = config or get_settings()
+        self._owns_openai_client = openai_client is None
+        self.openai = openai_client
+        if self.openai is None and self.config.openai_key:
+            self.openai = AsyncOpenAI(
+                api_key=self.config.openai_key,
+                timeout=self.config.openai_timeout_seconds,
+                max_retries=self.config.openai_max_retries,
+            )
+
+        self.supabase = supabase_client
+        if self.supabase is None and self.config.supabase_url and self.config.database_key:
+            self.supabase = create_client(self.config.supabase_url, self.config.database_key)
+        mistral_secret = self.config.mistral_api_key
+        self.mistral_key = mistral_secret.get_secret_value() if mistral_secret else None
+        self._owns_http_client = http_client is None
+        self.http = http_client or httpx.AsyncClient(
+            timeout=httpx.Timeout(self.config.ingest_download_timeout_seconds),
+            follow_redirects=False,
+        )
+
+    async def aclose(self) -> None:
+        if self.openai is not None and self._owns_openai_client:
+            await self.openai.close()
+        if self._owns_http_client:
+            await self.http.aclose()
 
     async def ingest(
         self,
-        content: Optional[str] = None,
-        attachments: Optional[List[Dict[str, Any]]] = None
-    ) -> Dict[str, Any]:
-        """Recebe texto + anexos, extrai/chunka/embeda/insere. Retorna totais."""
-        sources: List[Dict[str, Any]] = []
-        errors: List[str] = []
-        total_chars = 0
+        content: str | None = None,
+        attachments: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        if self.openai is None or self.supabase is None:
+            raise RuntimeError("OpenAI and Supabase must be configured for ingestion")
 
-        textos: List[tuple[str, str]] = []  # (texto, fonte)
+        attachments = attachments or []
+        if len(attachments) > self.config.ingest_max_attachments:
+            raise IngestionValidationError("Too many attachments")
 
-        # 1) Texto inline (mensagem do Discord)
+        sources: list[dict[str, Any]] = []
+        errors: list[str] = []
+        texts: list[tuple[str, str]] = []
         if content and content.strip():
-            textos.append((content.strip(), "discord-text"))
+            texts.append((content.strip(), "discord-text"))
 
-        # 2) Anexos
-        for att in (attachments or []):
-            url = att.get("url")
-            filename = att.get("filename") or "anexo"
-            ctype = (att.get("contentType") or "").lower()
-            if not url:
-                continue
+        for attachment in attachments:
+            url = str(attachment.get("url") or "")
+            filename = str(attachment.get("filename") or "attachment")[:255]
+            content_type = str(
+                attachment.get("contentType") or attachment.get("content_type") or ""
+            ).lower()
             try:
-                texto = await self._extract_attachment(url, ctype, filename)
-                if texto:
-                    textos.append((texto, filename))
-                    logger.info(f"[Ingestion] Extraído {len(texto)} chars de {filename}")
+                extracted = await self._extract_attachment(url, content_type, filename)
+                if extracted.strip():
+                    texts.append((extracted, filename))
                 else:
-                    errors.append(f"{filename}: extração vazia")
-                    logger.warning(f"[Ingestion] Extração vazia em {filename}")
-            except Exception as e:
-                errors.append(f"{filename}: {str(e)[:120]}")
-                logger.error(f"[Ingestion] Erro em {filename}: {e}")
+                    errors.append(f"{filename}: no extractable text")
+            except IngestionValidationError:
+                raise
+            except Exception:
+                logger.exception("Attachment extraction failed")
+                errors.append(f"{filename}: extraction failed")
 
-        if not textos:
-            return {"chunks_created": 0, "total_chars": 0, "sources": [], "errors": errors or ["Nada para ingerir"]}
+        total_chars = sum(len(text) for text, _ in texts)
+        if total_chars > self.config.ingest_max_total_chars:
+            raise IngestionValidationError(
+                f"Extracted text exceeds {self.config.ingest_max_total_chars} characters"
+            )
+        if not texts:
+            return {
+                "chunks_created": 0,
+                "total_chars": 0,
+                "sources": [],
+                "errors": errors or ["Nothing to ingest"],
+            }
 
-        # 3) Chunkar
-        all_chunks: List[str] = []
-        for texto, src in textos:
-            chs = chunk_text(texto)
-            all_chunks.extend(chs)
-            total_chars += len(texto)
-            sources.append({"source": src, "chars": len(texto), "chunks": len(chs)})
+        chunks: list[str] = []
+        chunk_sources: list[str] = []
+        for text, source in texts:
+            source_chunks = chunk_text(text)
+            chunks.extend(source_chunks)
+            chunk_sources.extend([source] * len(source_chunks))
+            sources.append({"source": source, "chars": len(text), "chunks": len(source_chunks)})
 
-        if not all_chunks:
-            return {"chunks_created": 0, "total_chars": total_chars, "sources": sources, "errors": errors + ["Nenhum chunk gerado"]}
+        if not chunks:
+            return {
+                "chunks_created": 0,
+                "total_chars": total_chars,
+                "sources": sources,
+                "errors": [*errors, "No chunks generated"],
+            }
 
-        # 4) Embeddings em batch
-        logger.info(f"[Ingestion] Gerando embeddings para {len(all_chunks)} chunks...")
-        embeddings = await self._embed_batch(all_chunks)
+        embeddings = await self._embed_batch(chunks)
+        if len(embeddings) != len(chunks):
+            raise RuntimeError("Embedding response length did not match chunk count")
 
-        # 5) Insert em batch
-        timestamp = datetime.now(timezone.utc).isoformat()
+        timestamp = datetime.now(UTC).isoformat()
         rows = [
             {
                 "content": chunk,
-                "embedding": emb,
+                "embedding": embedding,
                 "metadata": {
                     "data": timestamp,
-                    "fonte": "discord-upload",
+                    "fonte": source,
                     "tipo_chunk": "semantico",
-                    "chunk_index": idx
-                }
+                    "chunk_index": index,
+                },
             }
-            for idx, (chunk, emb) in enumerate(zip(all_chunks, embeddings))
+            for index, (chunk, embedding, source) in enumerate(
+                zip(chunks, embeddings, chunk_sources, strict=True)
+            )
         ]
 
         inserted = 0
-        for i in range(0, len(rows), INSERT_BATCH):
-            batch = rows[i:i + INSERT_BATCH]
+        for offset in range(0, len(rows), INSERT_BATCH):
+            batch = rows[offset : offset + INSERT_BATCH]
             try:
-                r = self.supabase.table("documents").insert(batch).execute()
-                inserted += len(r.data or [])
-            except Exception as e:
-                logger.error(f"[Ingestion] Erro no insert batch {i // INSERT_BATCH}: {e}")
-                errors.append(f"insert batch {i // INSERT_BATCH}: {str(e)[:120]}")
+                response = await asyncio.to_thread(self._insert_documents, batch)
+                inserted += len(response.data or [])
+            except Exception:
+                logger.exception("Document batch insert failed")
+                errors.append(f"batch {offset // INSERT_BATCH}: insert failed")
 
-        logger.info(f"[Ingestion] Inseridos {inserted}/{len(rows)} chunks ({total_chars} chars)")
         return {
             "chunks_created": inserted,
             "total_chars": total_chars,
             "sources": sources,
-            "errors": errors
+            "errors": errors,
         }
 
-    # ---------- Extração ---------- #
+    def _insert_documents(self, batch: list[dict[str, Any]]) -> Any:
+        return self.supabase.table("documents").insert(batch).execute()
 
-    async def _extract_attachment(self, url: str, ctype: str, filename: str) -> str:
-        async with httpx.AsyncClient(timeout=60) as http:
-            resp = await http.get(url)
-            resp.raise_for_status()
-            data = resp.content
+    def _validate_attachment_url(self, url: str) -> str:
+        parsed = urlparse(url)
+        host = (parsed.hostname or "").lower().rstrip(".")
+        allowed = {item.lower().rstrip(".") for item in self.config.ingest_allowed_hosts}
+        if parsed.scheme != "https" or not host or host not in allowed:
+            raise IngestionValidationError("Attachment host is not allowed")
+        if parsed.username or parsed.password or (parsed.port not in (None, 443)):
+            raise IngestionValidationError("Attachment URL contains forbidden authority data")
+        return url
 
-        is_pdf = ctype in PDF_MIMES or filename.lower().endswith(".pdf")
-        is_text = ctype in TEXT_MIMES or filename.lower().endswith((".txt", ".md"))
+    async def _download_attachment(self, url: str) -> tuple[bytes, str]:
+        safe_url = self._validate_attachment_url(url)
+        downloaded = bytearray()
+        async with self.http.stream("GET", safe_url) as response:
+            if response.is_redirect:
+                raise IngestionValidationError("Attachment redirects are not allowed")
+            response.raise_for_status()
+            content_length = response.headers.get("content-length")
+            if content_length and int(content_length) > self.config.ingest_max_file_bytes:
+                raise IngestionValidationError("Attachment is too large")
+            async for chunk in response.aiter_bytes():
+                downloaded.extend(chunk)
+                if len(downloaded) > self.config.ingest_max_file_bytes:
+                    raise IngestionValidationError("Attachment is too large")
+            response_type = response.headers.get("content-type", "").split(";", 1)[0].lower()
+        return bytes(downloaded), response_type
+
+    async def _extract_attachment(self, url: str, content_type: str, filename: str) -> str:
+        data, response_type = await self._download_attachment(url)
+        effective_type = response_type or content_type
+        is_pdf = effective_type in PDF_MIMES or filename.lower().endswith(".pdf")
+        is_text = effective_type in TEXT_MIMES or filename.lower().endswith((".txt", ".md"))
 
         if is_pdf:
-            texto = self._extract_pdf_pymupdf(data)
-            if texto.strip():
-                return texto
+            text = await asyncio.to_thread(self._extract_pdf_pymupdf, data)
+            if text.strip():
+                return text
             if self.mistral_key:
-                logger.info(f"[Ingestion] PyMuPDF vazio em {filename}, tentando Mistral OCR...")
                 return await self._extract_pdf_mistral(url)
-            logger.warning(f"[Ingestion] PDF imagem sem MISTRAL_API_KEY: {filename}")
             return ""
-
         if is_text:
             return data.decode("utf-8", errors="replace")
-
-        logger.warning(f"[Ingestion] Tipo não suportado: {ctype} ({filename})")
-        return ""
+        raise IngestionValidationError(
+            f"Unsupported attachment type: {effective_type or 'unknown'}"
+        )
 
     def _extract_pdf_pymupdf(self, pdf_bytes: bytes) -> str:
+        import fitz
+
         try:
-            import fitz  # PyMuPDF
-            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-            partes = [page.get_text() for page in doc]
-            doc.close()
-            return "\n\n".join(partes)
-        except Exception as e:
-            logger.error(f"[Ingestion] Erro no PyMuPDF: {e}")
+            with fitz.open(stream=pdf_bytes, filetype="pdf") as document:
+                if document.page_count > self.config.ingest_max_pdf_pages:
+                    raise IngestionValidationError("PDF has too many pages")
+                return "\n\n".join(page.get_text() for page in document)
+        except IngestionValidationError:
+            raise
+        except Exception:
+            logger.exception("PDF extraction failed")
             return ""
 
     async def _extract_pdf_mistral(self, url: str) -> str:
-        try:
-            from mistralai import Mistral
+        from mistralai import Mistral
+
+        def process() -> str:
             client = Mistral(api_key=self.mistral_key)
-            resp = client.ocr.process(
+            response = client.ocr.process(
                 model="mistral-ocr-latest",
-                document={"type": "document_url", "document_url": url}
+                document={"type": "document_url", "document_url": url},
             )
-            partes = []
-            for page in resp.pages:
-                md = getattr(page, "markdown", None)
-                if md:
-                    partes.append(md)
-            return "\n\n".join(partes)
-        except Exception as e:
-            logger.error(f"[Ingestion] Erro no Mistral OCR: {e}")
+            return "\n\n".join(
+                markdown for page in response.pages if (markdown := getattr(page, "markdown", None))
+            )
+
+        try:
+            return await asyncio.to_thread(process)
+        except Exception:
+            logger.exception("Mistral OCR failed")
             return ""
 
-    # ---------- Embeddings ---------- #
-
-    async def _embed_batch(self, texts: List[str]) -> List[List[float]]:
-        if not self.openai:
-            return [[0.1] * 1536 for _ in texts]
-        out: List[List[float]] = []
-        for i in range(0, len(texts), EMBED_BATCH):
-            batch = texts[i:i + EMBED_BATCH]
-            resp = await self.openai.embeddings.create(
-                model="text-embedding-3-small",
-                input=batch
+    async def _embed_batch(self, texts: list[str]) -> list[list[float]]:
+        if self.openai is None:
+            raise RuntimeError("OpenAI is not configured")
+        embeddings: list[list[float]] = []
+        for offset in range(0, len(texts), EMBED_BATCH):
+            response = await self.openai.embeddings.create(
+                model=self.config.embedding_model,
+                input=texts[offset : offset + EMBED_BATCH],
             )
-            out.extend([d.embedding for d in resp.data])
-        return out
+            embeddings.extend(item.embedding for item in response.data)
+        return embeddings

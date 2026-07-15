@@ -159,7 +159,7 @@ RAGAgent.execute(query, mode):
 
 ```env
 # OpenAI
-OPENAI_API_KEY=sk-proj-xxxxx  # Obrigatório para modo real
+OPENAI_API_KEY=replace-with-your-key  # Obrigatório para modo real
 
 # Supabase
 SUPABASE_URL=https://xxxx.supabase.co
@@ -222,7 +222,7 @@ python -m pytest tests/ -v
   - Output: id, content, embedding, metadata, similarity
 
 # 2. Configurar .env com valores reais:
-OPENAI_API_KEY=sk-proj-xxxxx
+OPENAI_API_KEY=replace-with-your-key
 SUPABASE_URL=https://xxxx.supabase.co
 SUPABASE_ANON_KEY=xxxx
 

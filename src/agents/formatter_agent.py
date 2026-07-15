@@ -2,7 +2,7 @@ from src.agents.base import Agent
 
 
 class FormatterAgent(Agent):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("Formatter")
 
     async def execute(self, response: str, mode: str = "orientacao") -> str:

@@ -1,44 +1,98 @@
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
+from typing import Annotated, Any, Literal
+
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, StringConstraints
+
+Mode = Literal["orientacao", "resposta-cliente", "bug"]
+Feedback = Literal["positivo", "negativo"]
+NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+UserId = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=128)]
 
 
-class IngestRequest(BaseModel):
-    content: str
-    content_type: str  # pdf | txt | text
-    source: str = "discord"
-    metadata: Dict[str, Any] = {}
+class StrictModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
 
 
-class IngestResponse(BaseModel):
+class IngestRequest(StrictModel):
+    content: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500_000)
+    ]
+    content_type: Literal["pdf", "txt", "text", "markdown"]
+    source: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=255)
+    ] = "discord"
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class Attachment(StrictModel):
+    url: AnyHttpUrl
+    filename: Annotated[str | None, StringConstraints(strip_whitespace=True, max_length=255)] = None
+    content_type: Annotated[
+        str | None, StringConstraints(strip_whitespace=True, max_length=128)
+    ] = Field(
+        default=None,
+        alias="contentType",
+    )
+
+
+class IngestPayload(StrictModel):
+    content: Annotated[str | None, StringConstraints(strip_whitespace=True, max_length=500_000)] = (
+        None
+    )
+    attachments: list[Attachment] = Field(default_factory=list, max_length=20)
+
+
+class IngestResponse(StrictModel):
     status: str
     chunks_created: int
     total_chars: int
     message: str
 
 
-class QueryRequest(BaseModel):
-    query: str
-    mode: Optional[str] = None  # orientacao | resposta-cliente | bug
+class IngestResult(StrictModel):
+    chunks_created: int = Field(ge=0)
+    total_chars: int = Field(ge=0)
+    sources: list[dict[str, Any]] = Field(default_factory=list)
+    errors: list[str] = Field(default_factory=list)
 
 
-class QueryResponse(BaseModel):
+class QueryRequest(StrictModel):
+    query: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=8_000)]
+    mode: Mode | None = None
+
+
+class QueryResponse(StrictModel):
     response: str
-    mode: str
-    score: float
-    chunks_used: int
-    processing_time_ms: float
-    interaction_id: Optional[str] = None  # id do registro salvo no histórico (para feedback)
+    mode: Mode
+    score: float = Field(ge=0.0, le=1.0)
+    chunks_used: int = Field(ge=0)
+    processing_time_ms: float = Field(ge=0.0)
+    interaction_id: str | None = None
 
 
-class FeedbackRequest(BaseModel):
-    """Feedback de uma resposta (👍/👎) vindo do Discord"""
-    interaction_id: str
-    feedback: str  # 'positivo' | 'negativo'
+class FeedbackRequest(StrictModel):
+    interaction_id: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=128)
+    ]
+    feedback: Feedback
 
 
-class LogEntry(BaseModel):
+class HistorySaveRequest(StrictModel):
+    user_id: UserId
+    pergunta: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=8_000)
+    ]
+    resposta: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=40_000)
+    ]
+    modo: Mode = "orientacao"
+    score: float = Field(default=0.0, ge=0.0, le=1.0)
+    chunks_used: int = Field(default=0, ge=0, le=100)
+    processing_time_ms: int = Field(default=0, ge=0)
+
+
+class LogEntry(StrictModel):
     timestamp: str
-    mode: str
+    mode: Mode
     query: str
     score: float
     response_length: int
@@ -46,35 +100,32 @@ class LogEntry(BaseModel):
     chunks_used: int
 
 
-class Document(BaseModel):
+class Document(StrictModel):
     id: str
     content: str
-    embedding: List[float]
-    metadata: Dict[str, Any]
-    score: Optional[float] = None
+    embedding: list[float]
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    score: float | None = Field(default=None, ge=0.0, le=1.0)
 
 
-class HistoryEntry(BaseModel):
-    """Single conversation entry stored in database"""
-    id: Optional[str] = None
-    user_id: str
+class HistoryEntry(StrictModel):
+    id: str | None = None
+    user_id: UserId
     pergunta: str
     resposta: str
-    modo: str = "orientacao"
-    score: float = 0.0
-    chunks_used: int = 0
-    processing_time_ms: int = 0
-    timestamp: Optional[str] = None
+    modo: Mode = "orientacao"
+    score: float = Field(default=0.0, ge=0.0, le=1.0)
+    chunks_used: int = Field(default=0, ge=0)
+    processing_time_ms: int = Field(default=0, ge=0)
+    timestamp: str | None = None
 
 
-class HistoryContextRequest(BaseModel):
-    """Request to get formatted history context for injection"""
-    user_id: str
-    limit: int = 5  # Last 5 conversations
+class HistoryContextRequest(StrictModel):
+    user_id: UserId
+    limit: int = Field(default=5, ge=1, le=20)
 
 
-class HistoryContextResponse(BaseModel):
-    """Formatted conversation history for prompt injection"""
+class HistoryContextResponse(StrictModel):
     formatted_context: str
-    entry_count: int
-    oldest_timestamp: Optional[str] = None
+    entry_count: int = Field(ge=0)
+    oldest_timestamp: str | None = None

@@ -9,7 +9,10 @@ class ClassifierAgent(Agent):
 
     async def execute(self, query: str) -> str:
         """Classificar pergunta em: orientacao, resposta-cliente ou bug"""
-        self.logger.info(f"[{self.name}] Classifying: {query[:50]}...")
+        self.logger.info(
+            "Classification started",
+            extra={"extras": {"query_chars": len(query)}},
+        )
 
         classification = await self.openai.classify(query)
 
