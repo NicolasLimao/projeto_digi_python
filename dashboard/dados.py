@@ -1,0 +1,291 @@
+"""Camada de dados do dashboard do Digi.
+
+Nada de Streamlit aqui: funções puras + wrappers finos de rede, para que os
+testes rodem offline e a UI fique só em app.py.
+"""
+
+from __future__ import annotations
+
+import json
+import time
+from dataclasses import dataclass
+from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
+from typing import Any
+
+import httpx
+from dotenv import dotenv_values
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DATASET_PATH = REPO_ROOT / "evals" / "dataset.jsonl"
+REPORTS_DIR = REPO_ROOT / "evals" / "reports"
+DEFAULT_API_BASE = "https://digi-api.squareweb.app"
+TABELA_RESPOSTAS = "duvidas_respondidas"
+
+# Paleta validada (skill dataviz, superfície #1a1a19). O cinza é o neutro
+# semântico de "sem avaliação" (midpoint, como em paletas divergentes).
+COR_POSITIVO = "#0ca30c"
+COR_SEM_AVALIACAO = "#8a8f98"
+COR_NEGATIVO = "#d03b3b"
+COR_SERIE = "#5c8ff0"
+
+
+@dataclass
+class Duvida:
+    chave: str
+    origem: str  # "producao" | "eval"
+    modo: str
+    pergunta: str
+    resposta_ruim: str
+    score: float | None = None
+    veredito: str | None = None
+    timestamp: str | None = None
+
+
+def carregar_env() -> dict[str, str]:
+    """Lê o .env da raiz; valores vazios são descartados."""
+    return {chave: valor for chave, valor in dotenv_values(REPO_ROOT / ".env").items() if valor}
+
+
+def criar_cliente_supabase(env: dict[str, str]) -> Any:
+    from supabase import create_client
+
+    url = env.get("SUPABASE_URL")
+    chave = env.get("SUPABASE_SERVICE_ROLE_KEY") or env.get("SUPABASE_ANON_KEY")
+    if not url or not chave:
+        raise RuntimeError("SUPABASE_URL e uma chave do Supabase são obrigatórias no .env")
+    return create_client(url, chave)
+
+
+def duvidas_producao(linhas: list[dict[str, Any]]) -> list[Duvida]:
+    """Converte linhas da view v_negativos em dúvidas pendentes."""
+    duvidas: list[Duvida] = []
+    for linha in linhas:
+        ts = str(linha.get("timestamp") or "")
+        duvidas.append(
+            Duvida(
+                chave=f"prod:{ts}",
+                origem="producao",
+                modo=str(linha.get("modo") or "orientacao"),
+                pergunta=str(linha.get("pergunta") or ""),
+                resposta_ruim=str(linha.get("resposta") or ""),
+                score=float(linha["score"]) if linha.get("score") is not None else None,
+                timestamp=ts,
+            )
+        )
+    return duvidas
+
+
+def duvidas_eval(dataset_path: Path, vereditos: dict[str, str] | None) -> list[Duvida]:
+    """Casos do dataset com REVISAR nas notas, anotados com o veredito do baseline."""
+    duvidas: list[Duvida] = []
+    for linha in dataset_path.read_text(encoding="utf-8").splitlines():
+        if not linha.strip():
+            continue
+        caso = json.loads(linha)
+        if "REVISAR" not in (caso.get("notas") or ""):
+            continue
+        duvidas.append(
+            Duvida(
+                chave=f"eval:{caso['id']}",
+                origem="eval",
+                modo=str(caso.get("modo") or "orientacao"),
+                pergunta=str(caso["pergunta"]),
+                resposta_ruim=str(caso.get("resposta_anterior") or ""),
+                veredito=(vereditos or {}).get(str(caso["id"])),
+            )
+        )
+    return duvidas
+
+
+def pendentes(producao: list[Duvida], eval_: list[Duvida], respondidas: set[str]) -> list[Duvida]:
+    """União das fontes (dedupe por chave) menos as já respondidas."""
+    todas: dict[str, Duvida] = {}
+    for duvida in [*producao, *eval_]:
+        todas.setdefault(duvida.chave, duvida)
+    return [duvida for chave, duvida in todas.items() if chave not in respondidas]
+
+
+def ultimo_baseline(reports_dir: Path) -> dict[str, Any] | None:
+    """Último baseline COMPLETO do eval + delta vs o completo anterior."""
+    completos: list[dict[str, Any]] = []
+    for arquivo in sorted(reports_dir.glob("*.json")):
+        try:
+            conteudo = json.loads(arquivo.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if conteudo.get("parcial") or not isinstance(conteudo.get("vereditos"), dict):
+            continue
+        completos.append(conteudo)
+    if not completos:
+        return None
+
+    def aprovados_de(relatorio: dict[str, Any]) -> int:
+        return sum(1 for veredito in relatorio["vereditos"].values() if veredito == "aprovado")
+
+    atual = completos[-1]
+    resumo: dict[str, Any] = {
+        "run": atual.get("run", "?"),
+        "aprovados": aprovados_de(atual),
+        "total": len(atual["vereditos"]),
+        "vereditos": dict(atual["vereditos"]),
+    }
+    if len(completos) >= 2:
+        resumo["delta"] = resumo["aprovados"] - aprovados_de(completos[-2])
+    return resumo
+
+
+def _somar_janela(linhas: list[dict[str, Any]], inicio: date, fim: date) -> dict[str, int]:
+    total = {"interacoes": 0, "positivos": 0, "negativos": 0}
+    for linha in linhas:
+        try:
+            dia = date.fromisoformat(str(linha.get("dia"))[:10])
+        except ValueError:
+            continue
+        if inicio <= dia <= fim:
+            for campo in total:
+                total[campo] += int(linha.get(campo) or 0)
+    return total
+
+
+def janelas_volume(
+    linhas: list[dict[str, Any]], dias: int, hoje: date
+) -> tuple[dict[str, int], dict[str, int]]:
+    """Somatórios da janela atual e da imediatamente anterior (deltas dos cards)."""
+    inicio_atual = hoje - timedelta(days=dias - 1)
+    inicio_anterior = inicio_atual - timedelta(days=dias)
+    atual = _somar_janela(linhas, inicio_atual, hoje)
+    anterior = _somar_janela(linhas, inicio_anterior, inicio_atual - timedelta(days=1))
+    return atual, anterior
+
+
+def preparar_volume_grafico(
+    linhas: list[dict[str, Any]], dias: int, hoje: date
+) -> list[dict[str, Any]]:
+    """Formato longo p/ gráfico empilhado: dia x categoria x quantidade (+ordem)."""
+    inicio = hoje - timedelta(days=dias - 1)
+    saida: list[dict[str, Any]] = []
+    for linha in linhas:
+        try:
+            dia = date.fromisoformat(str(linha.get("dia"))[:10])
+        except ValueError:
+            continue
+        if not inicio <= dia <= hoje:
+            continue
+        positivos = int(linha.get("positivos") or 0)
+        negativos = int(linha.get("negativos") or 0)
+        sem = max(int(linha.get("interacoes") or 0) - positivos - negativos, 0)
+        for ordem, (categoria, quantidade) in enumerate(
+            [("Positivos", positivos), ("Sem avaliação", sem), ("Negativos", negativos)]
+        ):
+            saida.append(
+                {
+                    "dia": dia.isoformat(),
+                    "categoria": categoria,
+                    "quantidade": quantidade,
+                    "ordem": ordem,
+                }
+            )
+    return saida
+
+
+def texto_ingestao(pergunta: str, resposta: str) -> str:
+    return (
+        f"Pergunta: {pergunta.strip()}\nResposta oficial validada pelo analista: {resposta.strip()}"
+    )
+
+
+def ingerir_resposta(api_base: str, token: str, texto: str) -> dict[str, Any]:
+    """Ensina o bot: ingere o texto na base RAG via API de produção."""
+    resposta = httpx.post(
+        f"{api_base.rstrip('/')}/api/ingest",
+        json={"content": texto},
+        headers={"X-API-Key": token},
+        timeout=120.0,
+    )
+    resposta.raise_for_status()
+    corpo: dict[str, Any] = resposta.json()
+    return corpo
+
+
+def chaves_respondidas(cliente: Any) -> set[str]:
+    resposta = cliente.table(TABELA_RESPOSTAS).select("chave").execute()
+    return {str(linha["chave"]) for linha in (resposta.data or [])}
+
+
+def registrar_resposta(cliente: Any, duvida: Duvida, resposta_correta: str, chunks: int) -> None:
+    cliente.table(TABELA_RESPOSTAS).insert(
+        {
+            "chave": duvida.chave,
+            "pergunta": duvida.pergunta,
+            "resposta_correta": resposta_correta,
+            "ingerida": True,
+            "chunks_criados": chunks,
+        }
+    ).execute()
+
+
+def _dia_do_bucket(bucket: dict[str, Any]) -> str:
+    return datetime.fromtimestamp(int(bucket.get("start_time") or 0), tz=UTC).date().isoformat()
+
+
+def parse_custos(costs_json: dict[str, Any], usage_json: dict[str, Any]) -> dict[str, Any]:
+    """Agrega custo (USD) e tokens por dia a partir dos buckets da OpenAI."""
+    por_dia: dict[str, dict[str, float | int]] = {}
+
+    def slot(dia: str) -> dict[str, float | int]:
+        return por_dia.setdefault(dia, {"custo_usd": 0.0, "tokens_entrada": 0, "tokens_saida": 0})
+
+    for bucket in costs_json.get("data") or []:
+        registro = slot(_dia_do_bucket(bucket))
+        for resultado in bucket.get("results") or []:
+            registro["custo_usd"] = float(registro["custo_usd"]) + float(
+                (resultado.get("amount") or {}).get("value") or 0
+            )
+    for bucket in usage_json.get("data") or []:
+        registro = slot(_dia_do_bucket(bucket))
+        for resultado in bucket.get("results") or []:
+            registro["tokens_entrada"] = int(registro["tokens_entrada"]) + int(
+                resultado.get("input_tokens") or 0
+            )
+            registro["tokens_saida"] = int(registro["tokens_saida"]) + int(
+                resultado.get("output_tokens") or 0
+            )
+
+    ordenado: list[dict[str, Any]] = [
+        {
+            "dia": dia,
+            "custo_usd": round(float(valores["custo_usd"]), 6),  # evita ruído de float
+            "tokens_entrada": int(valores["tokens_entrada"]),
+            "tokens_saida": int(valores["tokens_saida"]),
+        }
+        for dia, valores in sorted(por_dia.items())
+    ]
+    total = round(sum((float(item["custo_usd"]) for item in ordenado), 0.0), 4)
+    return {"por_dia": ordenado, "custo_total_usd": total}
+
+
+def custos_openai(admin_key: str, dias: int) -> dict[str, Any]:
+    """Consulta as APIs organizacionais de custo/uso da OpenAI (exige Admin key)."""
+    inicio = int(time.time()) - dias * 86_400
+    cabecalhos = {"Authorization": f"Bearer {admin_key}"}
+    parametros: dict[str, int | str] = {
+        "start_time": inicio,
+        "bucket_width": "1d",
+        "limit": dias,
+    }
+    custos = httpx.get(
+        "https://api.openai.com/v1/organization/costs",
+        params=parametros,
+        headers=cabecalhos,
+        timeout=30.0,
+    )
+    custos.raise_for_status()
+    uso = httpx.get(
+        "https://api.openai.com/v1/organization/usage/completions",
+        params=parametros,
+        headers=cabecalhos,
+        timeout=30.0,
+    )
+    uso.raise_for_status()
+    return parse_custos(custos.json(), uso.json())
