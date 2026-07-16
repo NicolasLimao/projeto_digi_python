@@ -292,3 +292,33 @@ def test_relatorio_pdf_gera_bytes_legiveis():
         assert doc.page_count >= 1
         texto = "".join(page.get_text() for page in doc)
     assert "Digi" in texto and "384" in texto
+
+
+class _StubSupabase:
+    def __init__(self):
+        self.inserido: dict | None = None
+        self.tabela: str | None = None
+
+    def table(self, nome: str):
+        self.tabela = nome
+        return self
+
+    def insert(self, payload: dict):
+        self.inserido = payload
+        return self
+
+    def execute(self):
+        return self
+
+
+def test_descartar_duvida_registra_sem_ingerir():
+    stub = _StubSupabase()
+    duvida = dados.Duvida("prod:1", "producao", "orientacao", "comob", "resposta do bot")
+    dados.descartar_duvida(stub, duvida, dados.MOTIVOS_DESCARTE["invalida"])
+    assert stub.tabela == dados.TABELA_RESPOSTAS
+    assert stub.inserido is not None
+    assert stub.inserido["chave"] == "prod:1"
+    assert stub.inserido["ingerida"] is False
+    assert stub.inserido["chunks_criados"] == 0
+    assert "descartada" in stub.inserido["resposta_correta"]
+    assert dados.MOTIVOS_DESCARTE["invalida"] in stub.inserido["resposta_correta"]

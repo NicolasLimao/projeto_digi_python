@@ -313,3 +313,25 @@ with aba_duvidas:
                             st.toast(f"Bot ensinado! {chunks} chunks criados.", icon="🎓")
                             _limpar_caches()
                             st.rerun()
+
+            st.caption("Ou, se a resposta do bot estava certa / a pergunta não vale correção:")
+            with st.form(key=f"desc_{duvida.chave}"):
+                col_motivo, col_botao = st.columns([3, 1])
+                motivo_id = col_motivo.selectbox(
+                    "Motivo do descarte",
+                    options=list(dados.MOTIVOS_DESCARTE),
+                    format_func=lambda item: dados.MOTIVOS_DESCARTE[item],
+                    key=f"motivo_{duvida.chave}",
+                    label_visibility="collapsed",
+                )
+                descartado = col_botao.form_submit_button("🗑️ Descartar")
+
+            if descartado:
+                try:
+                    dados.descartar_duvida(_cliente(), duvida, dados.MOTIVOS_DESCARTE[motivo_id])
+                except Exception as erro:
+                    st.error(f"Falha ao descartar — a dúvida continua pendente. ({erro})")
+                else:
+                    st.toast("Dúvida descartada (nada foi ensinado ao bot).", icon="🗑️")
+                    _limpar_caches()
+                    st.rerun()

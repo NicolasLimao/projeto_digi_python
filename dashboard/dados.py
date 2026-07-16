@@ -229,6 +229,26 @@ def registrar_resposta(cliente: Any, duvida: Duvida, resposta_correta: str, chun
     ).execute()
 
 
+MOTIVOS_DESCARTE = {
+    "correta": "resposta do bot estava correta",
+    "fora_escopo": "fora do escopo Digisac/Ikatec",
+    "invalida": "pergunta inválida/incompleta",
+}
+
+
+def descartar_duvida(cliente: Any, duvida: Duvida, motivo: str) -> None:
+    """Fecha a dúvida sem ensinar nada ao bot (nada é ingerido na base RAG)."""
+    cliente.table(TABELA_RESPOSTAS).insert(
+        {
+            "chave": duvida.chave,
+            "pergunta": duvida.pergunta,
+            "resposta_correta": f"[descartada: {motivo}]",
+            "ingerida": False,
+            "chunks_criados": 0,
+        }
+    ).execute()
+
+
 def _dia_do_bucket(bucket: dict[str, Any]) -> str:
     return datetime.fromtimestamp(int(bucket.get("start_time") or 0), tz=UTC).date().isoformat()
 
