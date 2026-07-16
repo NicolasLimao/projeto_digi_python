@@ -1,0 +1,5 @@
+# Dependências exclusivas do dashboard local (NÃO instalar em produção).
+# Instale por cima do venv do projeto: .venv/Scripts/pip install -r dashboard/requirements.txt
+streamlit>=1.49
+altair>=5.4
+pandas>=2.2
