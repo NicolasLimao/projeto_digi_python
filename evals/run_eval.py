@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -149,16 +150,45 @@ async def _rodar_caso(
 
 
 def _vereditos_anteriores() -> dict[str, str] | None:
-    arquivos = sorted(REPORTS_DIR.glob("*.json"))
-    if not arquivos:
+    """Vereditos da última rodada *completa* (ignora rodadas parciais)."""
+    for arquivo in sorted(REPORTS_DIR.glob("*.json"), reverse=True):
+        dados = json.loads(arquivo.read_text(encoding="utf-8"))
+        if dados.get("parcial"):
+            continue
+        vereditos = dados.get("vereditos")
+        if isinstance(vereditos, dict):
+            return vereditos
+    return None
+
+
+def _calcular_delta(
+    resultados: list[CaseResult], anteriores: dict[str, str] | None
+) -> tuple[list[str], list[str]] | None:
+    if not anteriores:
         return None
-    dados = json.loads(arquivos[-1].read_text(encoding="utf-8"))
-    vereditos = dados.get("vereditos")
-    return vereditos if isinstance(vereditos, dict) else None
+    regressoes = [
+        r.case_id
+        for r in resultados
+        if r.veredito == "reprovado" and anteriores.get(r.case_id) == "aprovado"
+    ]
+    correcoes = [
+        r.case_id
+        for r in resultados
+        if r.veredito == "aprovado" and anteriores.get(r.case_id) == "reprovado"
+    ]
+    return regressoes, correcoes
+
+
+def _sanitizar_md_celula(texto: str) -> str:
+    """Evita que `|` ou quebras de linha no texto do juiz quebrem a tabela md."""
+    return texto.replace("|", "\\|").replace("\r", " ").replace("\n", " ")
 
 
 def _escrever_relatorio(
-    resultados: list[CaseResult], run_id: str, anteriores: dict[str, str] | None
+    resultados: list[CaseResult],
+    run_id: str,
+    anteriores: dict[str, str] | None,
+    parcial: bool,
 ) -> Path:
     REPORTS_DIR.mkdir(exist_ok=True)
     aprovados = sum(1 for r in resultados if r.veredito == "aprovado")
@@ -167,20 +197,12 @@ def _escrever_relatorio(
     linhas = [
         f"# Eval {run_id}",
         "",
-        f"**Resultado: {aprovados}/{len(resultados)} aprovados** ({erros} erros de infra)",
+        f"**Resultado: {aprovados}/{len(resultados)} aprovados** ({erros} erros)",
         "",
     ]
-    if anteriores:
-        regressoes = [
-            r.case_id
-            for r in resultados
-            if r.veredito == "reprovado" and anteriores.get(r.case_id) == "aprovado"
-        ]
-        correcoes = [
-            r.case_id
-            for r in resultados
-            if r.veredito == "aprovado" and anteriores.get(r.case_id) == "reprovado"
-        ]
+    delta = _calcular_delta(resultados, anteriores)
+    if delta is not None:
+        regressoes, correcoes = delta
         linhas += [
             f"Delta vs rodada anterior — regressões: {regressoes or 'nenhuma'}; "
             f"correções: {correcoes or 'nenhuma'}",
@@ -188,30 +210,38 @@ def _escrever_relatorio(
         ]
     linhas += ["| id | veredito | motivo | score | tempo (ms) |", "|---|---|---|---|---|"]
     for r in resultados:
-        linhas.append(f"| {r.case_id} | {r.veredito} | {r.motivo} | {r.score} | {r.tempo_ms} |")
+        motivo = _sanitizar_md_celula(r.motivo)
+        linhas.append(f"| {r.case_id} | {r.veredito} | {motivo} | {r.score} | {r.tempo_ms} |")
 
     md_path = REPORTS_DIR / f"{run_id}.md"
     md_path.write_text("\n".join(linhas) + "\n", encoding="utf-8")
     (REPORTS_DIR / f"{run_id}.json").write_text(
         json.dumps(
-            {"run": run_id, "vereditos": {r.case_id: r.veredito for r in resultados}},
+            {
+                "run": run_id,
+                "parcial": parcial,
+                "vereditos": {r.case_id: r.veredito for r in resultados},
+            },
             ensure_ascii=False,
             indent=1,
-        ),
+        )
+        + "\n",
         encoding="utf-8",
     )
     return md_path
 
 
 async def _main_async(args: argparse.Namespace) -> int:
-    casos = load_dataset(DATASET_PATH)
+    todos_casos = load_dataset(DATASET_PATH)
+    casos = todos_casos
     if args.filter:
         casos = [caso for caso in casos if args.filter in caso.id]
-    if args.limit:
+    if args.limit is not None:
         casos = casos[: args.limit]
     if not casos:
         print("Nenhum caso após filtros.")
         return 1
+    parcial = bool(args.filter) or args.limit is not None or len(casos) < len(todos_casos)
 
     if args.dry_run:
         for caso in casos:
@@ -225,6 +255,9 @@ async def _main_async(args: argparse.Namespace) -> int:
     if not api_token or not openai_key:
         print("API_AUTH_TOKEN e OPENAI_API_KEY são obrigatórios no .env")
         return 1
+    api_url = (
+        args.api_url or env.get("EVAL_API_URL") or os.environ.get("EVAL_API_URL") or DEFAULT_API_URL
+    )
 
     run_id = time.strftime("%Y-%m-%d-%H%M")
     user_id = f"eval_{time.strftime('%Y%m%d%H%M%S')}"
@@ -236,7 +269,7 @@ async def _main_async(args: argparse.Namespace) -> int:
         resultados = list(
             await asyncio.gather(
                 *(
-                    _rodar_caso(caso, http_client, juiz, args.api_url, api_token, user_id, limite)
+                    _rodar_caso(caso, http_client, juiz, api_url, api_token, user_id, limite)
                     for caso in casos
                 )
             )
@@ -244,10 +277,17 @@ async def _main_async(args: argparse.Namespace) -> int:
     await juiz.close()
 
     resultados.sort(key=lambda r: r.case_id)
-    md_path = _escrever_relatorio(resultados, run_id, anteriores)
+    md_path = _escrever_relatorio(resultados, run_id, anteriores, parcial)
 
     aprovados = sum(1 for r in resultados if r.veredito == "aprovado")
     print(f"\n{aprovados}/{len(resultados)} aprovados — relatório: {md_path}")
+    delta = _calcular_delta(resultados, anteriores)
+    if delta is not None:
+        regressoes, correcoes = delta
+        print(
+            f"Delta vs rodada anterior — regressões: {regressoes or 'nenhuma'}; "
+            f"correções: {correcoes or 'nenhuma'}"
+        )
     for r in resultados:
         if r.veredito != "aprovado":
             print(f"  {r.veredito.upper()}: {r.case_id} — {r.motivo}")
@@ -259,7 +299,11 @@ def main() -> int:
     parser.add_argument("--filter", help="roda só casos cujo id contém a substring")
     parser.add_argument("--limit", type=int, help="roda só os N primeiros casos")
     parser.add_argument("--dry-run", action="store_true", help="lista casos sem chamar a API")
-    parser.add_argument("--api-url", default=DEFAULT_API_URL, help="endpoint /api/rag/query")
+    parser.add_argument(
+        "--api-url",
+        default=None,
+        help="endpoint /api/rag/query (padrão: EVAL_API_URL do .env/ambiente, senão produção)",
+    )
     return asyncio.run(_main_async(parser.parse_args()))
 
 

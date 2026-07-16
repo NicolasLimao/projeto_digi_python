@@ -64,3 +64,42 @@ def test_parse_judge_response_invalida_vira_erro():
     veredito, motivo = run_eval.parse_judge_response("não sou json")
     assert veredito == "erro"
     assert "parseável" in motivo
+
+
+def test_calcular_delta_sem_anteriores_retorna_none():
+    resultados = [run_eval.CaseResult("neg-001", "aprovado", "ok")]
+    assert run_eval._calcular_delta(resultados, None) is None
+
+
+def test_calcular_delta_identifica_regressoes_e_correcoes():
+    resultados = [
+        run_eval.CaseResult("neg-001", "reprovado", "piorou"),
+        run_eval.CaseResult("neg-002", "aprovado", "melhorou"),
+        run_eval.CaseResult("neg-003", "aprovado", "manteve"),
+    ]
+    anteriores = {"neg-001": "aprovado", "neg-002": "reprovado", "neg-003": "aprovado"}
+    regressoes, correcoes = run_eval._calcular_delta(resultados, anteriores)
+    assert regressoes == ["neg-001"]
+    assert correcoes == ["neg-002"]
+
+
+def test_sanitizar_md_celula_escapa_pipe_e_remove_quebras():
+    texto = "motivo com | pipe\ne quebra\r\nde linha"
+    resultado = run_eval._sanitizar_md_celula(texto)
+    assert "\n" not in resultado
+    assert "\r" not in resultado
+    assert "\\|" in resultado
+
+
+def test_vereditos_anteriores_ignora_rodadas_parciais(tmp_path, monkeypatch):
+    monkeypatch.setattr(run_eval, "REPORTS_DIR", tmp_path)
+    (tmp_path / "2026-01-01-0000.json").write_text(
+        json.dumps({"run": "a", "parcial": False, "vereditos": {"neg-001": "aprovado"}}),
+        encoding="utf-8",
+    )
+    (tmp_path / "2026-01-02-0000.json").write_text(
+        json.dumps({"run": "b", "parcial": True, "vereditos": {"neg-001": "reprovado"}}),
+        encoding="utf-8",
+    )
+    anteriores = run_eval._vereditos_anteriores()
+    assert anteriores == {"neg-001": "aprovado"}

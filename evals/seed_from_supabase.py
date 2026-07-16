@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from dotenv import dotenv_values
 from supabase import create_client
@@ -74,14 +74,17 @@ def main() -> None:
         raise SystemExit("SUPABASE_URL/SUPABASE_ANON_KEY ausentes no .env")
     client = create_client(url, key)
 
-    negativos = client.table("v_negativos").select("*").execute().data or []
-    positivos = (
+    negativos = cast(
+        "list[dict[str, Any]]", client.table("v_negativos").select("*").execute().data or []
+    )
+    positivos = cast(
+        "list[dict[str, Any]]",
         client.table("historico_digi")
         .select("user_id,pergunta,resposta,modo,score,timestamp")
         .eq("feedback", "positivo")
         .execute()
         .data
-        or []
+        or [],
     )
 
     casos = [
