@@ -289,3 +289,88 @@ def custos_openai(admin_key: str, dias: int) -> dict[str, Any]:
     )
     uso.raise_for_status()
     return parse_custos(custos.json(), uso.json())
+
+
+def _tabela_md(linhas: list[dict[str, Any]], campos: list[str]) -> list[str]:
+    if not linhas:
+        return ["(sem dados)"]
+    cabecalho = "| " + " | ".join(campos) + " |"
+    separador = "|" + "|".join("---" for _ in campos) + "|"
+    corpo = [
+        "| " + " | ".join(str(linha.get(campo, "")) for campo in campos) + " |" for linha in linhas
+    ]
+    return [cabecalho, separador, *corpo]
+
+
+def gerar_relatorio_md(
+    resumo: dict[str, Any],
+    por_modo: list[dict[str, Any]],
+    por_canal: list[dict[str, Any]],
+    baseline: dict[str, Any] | None,
+    duvidas: list[Duvida],
+    dias: int,
+    gerado_em: str,
+) -> str:
+    linhas = [
+        "# Relatório Digi",
+        "",
+        f"Gerado em {gerado_em} — janela de {dias} dias (feedback geral é acumulado).",
+        "",
+        "## Resumo de feedback",
+        "",
+        f"- Interações: {resumo.get('total_interacoes', 0)}",
+        f"- Positivos: {resumo.get('positivos', 0)}",
+        f"- Negativos: {resumo.get('negativos', 0)}",
+        f"- Sem avaliação: {resumo.get('sem_feedback', 0)}",
+        f"- Taxa de aprovação: {resumo.get('taxa_aprovacao_pct', 0)}%",
+        "",
+        "## Por modo",
+        "",
+        *_tabela_md(por_modo, ["modo", "interacoes", "positivos", "negativos"]),
+        "",
+        "## Por canal",
+        "",
+        *_tabela_md(por_canal, ["canal", "interacoes", "positivos", "negativos"]),
+        "",
+        "## Avaliação automática (eval)",
+        "",
+    ]
+    if baseline:
+        delta = baseline.get("delta")
+        extra = f" (delta {delta:+d} vs rodada anterior)" if isinstance(delta, int) else ""
+        linhas.append(
+            f"- Último baseline {baseline['run']}: "
+            f"{baseline['aprovados']}/{baseline['total']} aprovados{extra}"
+        )
+    else:
+        linhas.append("- Nenhuma rodada de avaliação encontrada (rode evals/run_eval.py).")
+    linhas += ["", "## Dúvidas pendentes", ""]
+    if duvidas:
+        for duvida in duvidas:
+            linhas.append(f"- [{duvida.origem}] {duvida.pergunta}")
+    else:
+        linhas.append("Nenhuma dúvida pendente. 🎉")
+    return "\n".join(linhas) + "\n"
+
+
+def gerar_relatorio_pdf(texto_md: str) -> bytes:
+    """PDF simples (fonte monoespaçada) a partir do relatório em markdown."""
+    import textwrap
+
+    import fitz
+
+    linhas_quebradas: list[str] = []
+    for linha in texto_md.splitlines():
+        linhas_quebradas.extend(textwrap.wrap(linha, width=95) or [""])
+
+    doc = fitz.open()
+    por_pagina = 52
+    for inicio in range(0, max(len(linhas_quebradas), 1), por_pagina):
+        pagina = doc.new_page()  # A4 595x842pt
+        y = 50.0
+        for linha in linhas_quebradas[inicio : inicio + por_pagina]:
+            pagina.insert_text((40, y), linha, fontname="cour", fontsize=9)
+            y += 14
+    conteudo = doc.tobytes()
+    doc.close()
+    return bytes(conteudo)

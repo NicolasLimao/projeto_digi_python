@@ -147,3 +147,49 @@ def test_parse_custos_agrega_buckets_diarios():
     assert dia["tokens_entrada"] == 1500
     assert dia["tokens_saida"] == 300
     assert resultado["custo_total_usd"] == 0.15
+
+
+def _relatorio_exemplo() -> str:
+    resumo = {
+        "total_interacoes": 384,
+        "positivos": 209,
+        "negativos": 14,
+        "sem_feedback": 161,
+        "taxa_aprovacao_pct": 94,
+    }
+    por_modo = [{"modo": "orientacao", "interacoes": 332, "positivos": 178, "negativos": 11}]
+    por_canal = [{"canal": "dm", "interacoes": 383, "positivos": 209, "negativos": 14}]
+    baseline = {"run": "2026-07-15-2357", "aprovados": 17, "total": 32}
+    duvida = dados.Duvida("prod:1", "producao", "orientacao", "Como exportar?", "R ruim")
+    return dados.gerar_relatorio_md(
+        resumo, por_modo, por_canal, baseline, [duvida], dias=30, gerado_em="2026-07-16 10:00"
+    )
+
+
+def test_relatorio_md_contem_secoes_e_dados():
+    texto = _relatorio_exemplo()
+    assert "# Relatório Digi" in texto
+    assert "2026-07-16 10:00" in texto
+    assert "384" in texto and "94" in texto
+    assert "orientacao" in texto and "dm" in texto
+    assert "17/32" in texto
+    assert "Como exportar?" in texto
+
+
+def test_relatorio_md_sem_baseline_e_sem_duvidas():
+    texto = dados.gerar_relatorio_md(
+        {"total_interacoes": 0}, [], [], None, [], dias=7, gerado_em="2026-07-16 10:00"
+    )
+    assert "Nenhuma rodada de avaliação encontrada" in texto
+    assert "Nenhuma dúvida pendente" in texto
+
+
+def test_relatorio_pdf_gera_bytes_legiveis():
+    import fitz
+
+    conteudo = dados.gerar_relatorio_pdf(_relatorio_exemplo())
+    assert conteudo[:5] == b"%PDF-"
+    with fitz.open(stream=conteudo, filetype="pdf") as doc:
+        assert doc.page_count >= 1
+        texto = "".join(page.get_text() for page in doc)
+    assert "Digi" in texto and "384" in texto
