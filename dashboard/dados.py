@@ -204,7 +204,11 @@ def ingerir_resposta(api_base: str, token: str, texto: str) -> dict[str, Any]:
         timeout=120.0,
     )
     resposta.raise_for_status()
-    corpo: dict[str, Any] = resposta.json()
+    try:
+        corpo: dict[str, Any] = resposta.json()
+    except ValueError:
+        # A ingestão já aconteceu (2xx); só o corpo não é JSON — não perder o fluxo.
+        return {"chunks_created": 0}
     return corpo
 
 
@@ -265,30 +269,48 @@ def parse_custos(costs_json: dict[str, Any], usage_json: dict[str, Any]) -> dict
     return {"por_dia": ordenado, "custo_total_usd": total}
 
 
-def custos_openai(admin_key: str, dias: int) -> dict[str, Any]:
-    """Consulta as APIs organizacionais de custo/uso da OpenAI (exige Admin key)."""
-    inicio = int(time.time()) - dias * 86_400
+def _buckets_paginados(
+    url: str, admin_key: str, inicio: int, limite_pagina: int
+) -> list[dict[str, Any]]:
+    """GET paginado (segue next_page/has_more) nas APIs de custo/uso da OpenAI."""
     cabecalhos = {"Authorization": f"Bearer {admin_key}"}
     parametros: dict[str, int | str] = {
         "start_time": inicio,
         "bucket_width": "1d",
-        "limit": dias,
+        "limit": limite_pagina,
     }
-    custos = httpx.get(
-        "https://api.openai.com/v1/organization/costs",
-        params=parametros,
-        headers=cabecalhos,
-        timeout=30.0,
+    acumulado: list[dict[str, Any]] = []
+    for _ in range(12):  # máx. 12 páginas de segurança
+        resposta = httpx.get(url, params=parametros, headers=cabecalhos, timeout=30.0)
+        resposta.raise_for_status()
+        corpo = resposta.json()
+        acumulado.extend(corpo.get("data") or [])
+        if not corpo.get("has_more"):
+            break
+        proxima_pagina = corpo.get("next_page")
+        if not proxima_pagina:
+            break
+        parametros = {**parametros, "page": proxima_pagina}
+    return acumulado
+
+
+def custos_openai(admin_key: str, dias: int) -> dict[str, Any]:
+    """Consulta as APIs organizacionais de custo/uso da OpenAI (exige Admin key).
+
+    O endpoint de usage limita `limit` a 31 para bucket_width=1d; costs aceita até 180.
+    """
+    inicio_costs = int(time.time()) - min(dias, 180) * 86_400
+    inicio_usage = int(time.time()) - min(dias, 31) * 86_400
+    custos = _buckets_paginados(
+        "https://api.openai.com/v1/organization/costs", admin_key, inicio_costs, min(dias, 180)
     )
-    custos.raise_for_status()
-    uso = httpx.get(
+    uso = _buckets_paginados(
         "https://api.openai.com/v1/organization/usage/completions",
-        params=parametros,
-        headers=cabecalhos,
-        timeout=30.0,
+        admin_key,
+        inicio_usage,
+        min(dias, 31),
     )
-    uso.raise_for_status()
-    return parse_custos(custos.json(), uso.json())
+    return parse_custos({"data": custos}, {"data": uso})
 
 
 def _tabela_md(linhas: list[dict[str, Any]], campos: list[str]) -> list[str]:
@@ -310,6 +332,8 @@ def gerar_relatorio_md(
     duvidas: list[Duvida],
     dias: int,
     gerado_em: str,
+    *,
+    erro_duvidas: str | None = None,
 ) -> str:
     linhas = [
         "# Relatório Digi",
@@ -345,7 +369,9 @@ def gerar_relatorio_md(
     else:
         linhas.append("- Nenhuma rodada de avaliação encontrada (rode evals/run_eval.py).")
     linhas += ["", "## Dúvidas pendentes", ""]
-    if duvidas:
+    if erro_duvidas:
+        linhas.append("Não foi possível apurar as dúvidas pendentes nesta geração.")
+    elif duvidas:
         for duvida in duvidas:
             linhas.append(f"- [{duvida.origem}] {duvida.pergunta}")
     else:

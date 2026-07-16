@@ -35,6 +35,8 @@ def _view(nome: str) -> list[dict[str, Any]]:
 
 def _limpar_caches() -> None:
     _view.clear()
+    for chave in [k for k in st.session_state if k.startswith("custos_")]:
+        del st.session_state[chave]
 
 
 st.title("🤖 Digi — Dashboard")
@@ -60,17 +62,22 @@ erro_duvidas: str | None = None
 lista_pendentes: list[dados.Duvida] = []
 producao: list[dados.Duvida] = []
 eval_: list[dados.Duvida] = []
+
 try:
     respondidas = dados.chaves_respondidas(_cliente())
-    producao = dados.duvidas_producao(_view("v_negativos"))
-    eval_ = dados.duvidas_eval(dados.DATASET_PATH, baseline["vereditos"] if baseline else None)
-    lista_pendentes = dados.pendentes(producao, eval_, respondidas)
 except Exception:
     erro_duvidas = (
         "Não consegui ler a tabela duvidas_respondidas. "
         "Rode sql/duvidas_respondidas.sql no Supabase SQL Editor."
     )
     respondidas = set()
+
+try:
+    producao = dados.duvidas_producao(_view("v_negativos"))
+    eval_ = dados.duvidas_eval(dados.DATASET_PATH, baseline["vereditos"] if baseline else None)
+    lista_pendentes = dados.pendentes(producao, eval_, respondidas)
+except Exception as erro:
+    erro_duvidas = f"Falha ao carregar as fontes de dúvidas: {type(erro).__name__}"
 
 aba_metricas, aba_duvidas = st.tabs(["📊 Métricas", "❓ Dúvidas pendentes"])
 
@@ -212,6 +219,7 @@ with aba_metricas:
         lista_pendentes,
         dias,
         datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
+        erro_duvidas=erro_duvidas,
     )
     formato = st.radio("Formato", ["TXT/Markdown", "PDF"], horizontal=True)
     carimbo = datetime.now(UTC).strftime("%Y%m%d-%H%M")

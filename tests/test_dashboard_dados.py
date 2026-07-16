@@ -149,6 +149,79 @@ def test_parse_custos_agrega_buckets_diarios():
     assert resultado["custo_total_usd"] == 0.15
 
 
+def test_buckets_paginados_segue_next_page(monkeypatch):
+    paginas = [
+        {"data": [{"start_time": 1, "results": []}], "has_more": True, "next_page": "p2"},
+        {"data": [{"start_time": 2, "results": []}], "has_more": False},
+    ]
+    chamadas: list[dict] = []
+
+    class _Resposta:
+        def __init__(self, corpo):
+            self._corpo = corpo
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return self._corpo
+
+    def _fake_get(url, params, headers, timeout):
+        chamadas.append(dict(params))
+        return _Resposta(paginas[len(chamadas) - 1])
+
+    monkeypatch.setattr(dados.httpx, "get", _fake_get)
+    buckets = dados._buckets_paginados("https://exemplo", "sk-admin", 0, 31)
+    assert len(buckets) == 2
+    assert len(chamadas) == 2
+    assert "page" not in chamadas[0]
+    assert chamadas[1]["page"] == "p2"
+
+
+def test_buckets_paginados_respeita_teto_de_seguranca(monkeypatch):
+    def _sempre_tem_mais(url, params, headers, timeout):
+        class _Resposta:
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                return {"data": [{}], "has_more": True, "next_page": "x"}
+
+        return _Resposta()
+
+    monkeypatch.setattr(dados.httpx, "get", _sempre_tem_mais)
+    buckets = dados._buckets_paginados("https://exemplo", "sk-admin", 0, 31)
+    assert len(buckets) == 12  # máx. 12 páginas de segurança
+
+
+def test_custos_openai_usa_limites_distintos_para_costs_e_usage(monkeypatch):
+    urls_e_limites: list[tuple[str, int]] = []
+
+    def _fake_buckets(url, admin_key, inicio, limite_pagina):
+        urls_e_limites.append((url, limite_pagina))
+        return []
+
+    monkeypatch.setattr(dados, "_buckets_paginados", _fake_buckets)
+    resultado = dados.custos_openai("sk-admin", dias=90)
+    assert resultado == {"por_dia": [], "custo_total_usd": 0.0}
+    limites = dict((url.rsplit("/", 1)[-1], limite) for url, limite in urls_e_limites)
+    assert limites["costs"] == 90
+    assert limites["completions"] == 31  # usage é limitado a 31 mesmo com dias=90
+
+
+def test_ingerir_resposta_corpo_2xx_nao_json(monkeypatch):
+    class _Resposta:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            raise ValueError("not json")
+
+    monkeypatch.setattr(dados.httpx, "post", lambda *a, **k: _Resposta())
+    resultado = dados.ingerir_resposta("https://api", "token", "texto")
+    assert resultado == {"chunks_created": 0}
+
+
 def _relatorio_exemplo() -> str:
     resumo = {
         "total_interacoes": 384,
@@ -182,6 +255,32 @@ def test_relatorio_md_sem_baseline_e_sem_duvidas():
     )
     assert "Nenhuma rodada de avaliação encontrada" in texto
     assert "Nenhuma dúvida pendente" in texto
+
+
+def test_relatorio_md_com_delta_do_baseline():
+    baseline = {"run": "r", "aprovados": 20, "total": 32, "delta": 3}
+    texto = dados.gerar_relatorio_md(
+        {"total_interacoes": 0}, [], [], baseline, [], dias=7, gerado_em="2026-07-16 10:00"
+    )
+    assert "20/32" in texto
+    assert "(delta +3" in texto
+
+
+def test_relatorio_md_com_erro_duvidas_e_honesto():
+    duvida = dados.Duvida("prod:1", "producao", "orientacao", "Como exportar?", "R ruim")
+    texto = dados.gerar_relatorio_md(
+        {"total_interacoes": 0},
+        [],
+        [],
+        None,
+        [duvida],
+        dias=7,
+        gerado_em="2026-07-16 10:00",
+        erro_duvidas="Falha ao carregar as fontes de dúvidas: RuntimeError",
+    )
+    assert "Não foi possível apurar as dúvidas pendentes nesta geração." in texto
+    assert "Como exportar?" not in texto
+    assert "Nenhuma dúvida pendente" not in texto
 
 
 def test_relatorio_pdf_gera_bytes_legiveis():
