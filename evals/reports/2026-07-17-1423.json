@@ -1,0 +1,17 @@
+{
+ "run": "2026-07-17-1423",
+ "parcial": true,
+ "vereditos": {
+  "neg-001": "aprovado",
+  "neg-003": "aprovado",
+  "neg-005": "reprovado",
+  "neg-007": "aprovado",
+  "neg-008": "reprovado",
+  "neg-009": "reprovado",
+  "neg-010": "aprovado",
+  "neg-011": "aprovado",
+  "neg-012": "aprovado",
+  "neg-013": "aprovado",
+  "neg-014": "aprovado"
+ }
+}
