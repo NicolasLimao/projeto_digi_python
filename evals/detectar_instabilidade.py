@@ -234,7 +234,8 @@ async def _rodar_caso(
             for _ in range(repeticoes)
         )
     )
-    chunks = await _chunks_do_caso(juiz, supabase_client, caso.pergunta)
+    async with limite:
+        chunks = await _chunks_do_caso(juiz, supabase_client, caso.pergunta)
     return ResultadoCaso(
         case_id=caso.id,
         pergunta=caso.pergunta,
