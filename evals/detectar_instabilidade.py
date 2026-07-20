@@ -18,6 +18,7 @@ import argparse
 import asyncio
 import json
 import os
+import re
 import sys
 import time
 from collections import Counter
@@ -48,6 +49,11 @@ class ResultadoCaso:
     vereditos: list[str] = field(default_factory=list)
     scores: list[float] = field(default_factory=list)
     chunks: list[dict[str, Any]] = field(default_factory=list)
+
+
+def _redigir(texto: str) -> str:
+    """Mascara e-mails em texto livre antes de gravar em relatório (repo é público)."""
+    return re.sub(r"[\w.+-]+@[\w-]+\.[\w.-]+", "[email]", texto)
 
 
 def indice_instabilidade(vereditos: list[str]) -> float:
@@ -108,9 +114,9 @@ def montar_relatorio(
         if resultado.scores:
             linhas.append(f"Score da API: {min(resultado.scores):.2f}-{max(resultado.scores):.2f}")
         if resultado.chunks:
-            linhas.append("Chunks recuperados (id · data · trecho):")
+            linhas.append("Chunks recuperados (ref · data · trecho):")
             linhas += [
-                f"- `{chunk.get('id')}` · {chunk.get('data') or 'sem data'} · "
+                f"- `{chunk.get('ref')}` · {chunk.get('data') or 'sem data'} · "
                 f"{chunk.get('trecho', '')}"
                 for chunk in resultado.chunks
             ]
@@ -204,11 +210,17 @@ async def _chunks_do_caso(
         return []
     chunks: list[dict[str, Any]] = []
     for item in resposta.data or []:
-        conteudo = " ".join(str(item.get("content") or "")[:120].split())
+        conteudo = _redigir(" ".join(str(item.get("content") or "")[:120].split()))
         metadados = item.get("metadata") or {}
+        # A RPC match_documents_hybrid não retorna o uuid real do chunk (só content,
+        # metadata, score) — por isso usamos fonte#chunk_index como referência (Fase 2
+        # troca por um id de verdade quando a RPC devolver a coluna).
+        fonte = str(metadados.get("fonte") or "?")
+        indice = metadados.get("chunk_index")
+        ref = f"{fonte}#{indice}"
         chunks.append(
             {
-                "id": str(item.get("id")),
+                "ref": ref,
                 "data": (str(metadados.get("data") or "")[:10] or None),
                 "trecho": conteudo,
                 "score_busca": round(float(item.get("score") or 0.0), 3),

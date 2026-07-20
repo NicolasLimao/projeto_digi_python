@@ -1,0 +1,2331 @@
+{
+ "run": "2026-07-19-1501",
+ "repeticoes": 5,
+ "casos": [
+  {
+   "id": "neg-008",
+   "indice": 0.4,
+   "vereditos": [
+    "reprovado",
+    "reprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Pergunta: Quais IAs a plataforma digisac possui? Resposta oficial validada pelo analista: A plataforma Digisac possui as",
+     "score_busca": 0.771
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# APRESENTAÇÃO INSTITUCIONAL A Digisac é uma Plataforma Desktop multiusuário e Aplicativo Mobile First que centraliza e",
+     "score_busca": 0.358
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# PRINCIPAIS INTEGRAÇÕES DIGISAC Conecte-se aos sistemas que você já usa. A Digisac se conecta a diversas ferramentas",
+     "score_busca": 0.35
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Sobre A página Sobre apresenta informações gerais sobre a plataforma Digisac e o ambiente em uso. Para acessá-la, cl",
+     "score_busca": 0.347
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# APLICATIVO (APP) Para auxiliar no atendimento aos clientes, a Digisac também disponibiliza acesso à plataforma por me",
+     "score_busca": 0.347
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "# APRESENTAÇÃO INSTITUCIONAL A **Digisac** é uma **Plataforma Desktop** multiusuário e **Aplicativo Mobile First** que c",
+     "score_busca": 0.341
+    },
+    {
+     "id": "None",
+     "data": "2026-05-14",
+     "trecho": "# digisac Ficou com alguma dúvida? Estamos à disposição com nossa equipe de suporte para esclarecer dúvidas, conduzir",
+     "score_busca": 0.335
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# GLOSSÁRIO Este glossário reúne os principais termos utilizados na Digisac. O objetivo é facilitar a compreensão de c",
+     "score_busca": 0.332
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Treinamentos Digisac Caso tenha interesse em agendar treinamentos, entre em contato pelo WhatsApp: https://api.whats",
+     "score_busca": 0.32
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Integrações A funcionalidade **Integrações** permite incorporar sites e sistemas externos à Digisac. Assim, o usuário",
+     "score_busca": 0.32
+    }
+   ]
+  },
+  {
+   "id": "neg-013",
+   "indice": 0.4,
+   "vereditos": [
+    "reprovado",
+    "reprovado",
+    "reprovado",
+    "aprovado",
+    "aprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Pergunta: Qual a opção para que eu possa enviar 2 templates antes de 24 horas. Resposta oficial validada pelo analista:",
+     "score_busca": 0.899
+    },
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Pergunta: Qual a opção para que eu possa enviar 2 templates seguidos? Resposta oficial validada pelo analista: Para envi",
+     "score_busca": 0.885
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Como enviar um Template no Chat Para utilizar um template: 1. Dentro do Chat, selecione um chamado com um contato da",
+     "score_busca": 0.305
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Envio de template com dois par\"metros --- Método: POST URL: {{URL}}/api/v1/messages Body: { \"type\": \"chat\", \"num",
+     "score_busca": 0.298
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Envio para aprovação Após salvar o template, é necessário enviá-lo para aprovação da Meta. Para isso, siga o passo a",
+     "score_busca": 0.294
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Limite e Restrição de Envio de Template Caso o tipo de conta selecionada no provedor seja da Ikatec, cuja gestão é re",
+     "score_busca": 0.283
+    },
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Pergunta: e envio de template sem abrir o chamado? Resposta oficial validada pelo analista: Para enviar um template sem",
+     "score_busca": 0.283
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Regras: - O nome deve conter apenas caracteres alfanuméricos minúsculos (letras a-z e dígitos 0-9) e o caractere und",
+     "score_busca": 0.279
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Enviar template para aprovação --- Método: POST URL: {{URL}}/api/v1/whatsapp-business-templates/{{hsmId}}/send-to-re",
+     "score_busca": 0.277
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Enviar template com botão --- Método: POST URL: {{URL}}/api/v1/messages Body: { \"type\": \"chat\", \"number\": \"{",
+     "score_busca": 0.276
+    }
+   ]
+  },
+  {
+   "id": "pos-014",
+   "indice": 0.4,
+   "vereditos": [
+    "reprovado",
+    "reprovado",
+    "aprovado",
+    "reprovado",
+    "aprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Agente Inteligente ① Ferramenta contratada à parte. Para mais informações, entre em contato com o time de Atendimento",
+     "score_busca": 0.598
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## 4. Definir Comandos e Transferência de Chamados: - Uma nova janela será aberta e você definirá as ações fixas que es",
+     "score_busca": 0.579
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Inteligência Artificial - Agente Inteligente: Agente de IA capaz de interpretar e responder mensagens de forma natura",
+     "score_busca": 0.464
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Transcrição de Áudio no Agente Inteligente Agora é possível utilizar a Transcrição de Áudio durante o atendimento do",
+     "score_busca": 0.382
+    },
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Pergunta: Quais IAs a plataforma digisac possui? Resposta oficial validada pelo analista: A plataforma Digisac possui as",
+     "score_busca": 0.368
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Março 2026 - Melhoria – Nome do Atendente no Encerramento de Chamados: Agora, ao fechar um chamado, o nome do atende",
+     "score_busca": 0.321
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# LANÇAMENTOS DE IA ① Ferramentas contratadas à parte. Para maiores informações, entre em contato com o time Comercial",
+     "score_busca": 0.31
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Janeiro 2026 - Novidade - Kanban de Atendimento: Nova funcionalidade que permite outra forma de gestão visual dos at",
+     "score_busca": 0.304
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Como habilitar a Transcrição de Áudio 1. No Menu Principal, selecione Mais Opções &gt; Empresa; --- 28/05/2026, 16:",
+     "score_busca": 0.292
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Cenário Ideal (tudo ativo) - Ferramenta de transcrição contratada; - Transcrição ativada para o Agente Inteligente;",
+     "score_busca": 0.277
+    }
+   ]
+  },
+  {
+   "id": "pos-009",
+   "indice": 0.2,
+   "vereditos": [
+    "aprovado",
+    "aprovado",
+    "reprovado",
+    "aprovado",
+    "aprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Apagar, editar, encaminhar, responder e reagir a mensagens Digisac - Editar, Responder, Encaminhar e Apagar Mensagem",
+     "score_busca": 0.274
+    },
+    {
+     "id": "None",
+     "data": "2026-04-28",
+     "trecho": "## Ao criar Documentação Payload Webhook ```json { \"event\": \"user.created\", \"data\": { \"id\": \"{{{id}}\", \"name\": \"{{{nam",
+     "score_busca": 0.27
+    },
+    {
+     "id": "None",
+     "data": "2026-04-28",
+     "trecho": "## Ao deletar Não é possível deletar",
+     "score_busca": 0.266
+    },
+    {
+     "id": "None",
+     "data": "2026-05-14",
+     "trecho": "# Problemas com Usuários - Identificar a situação com o usuário. - Explicar como configurar ou arquivar pelo cliente. -",
+     "score_busca": 0.265
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# 2. Pela página inicial dos Quadros Kanban Na coluna Ações, clique nos três pontinhos ao lado do quadro desejado e sel",
+     "score_busca": 0.264
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Principais motivos para encerrar chamados: - Evitar acúmulo de mensagens na fila de atendimento; - Liberar o contato",
+     "score_busca": 0.264
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Excluir mensagem interativa --- Método: DELETE URL: {{URL}}/api/v1/interactive-messages/{{interactiveMessagesId}}",
+     "score_busca": 0.26
+    },
+    {
+     "id": "None",
+     "data": "2026-04-15",
+     "trecho": "Para que possamos realizar a exclusão de uma conexão, é necessário que a solicitação seja enviada para o e-mail **suport",
+     "score_busca": 0.259
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Apagar oportunidade --- Método: DELETE URL: {{URL}}/v1/cards/{{cardsId}}",
+     "score_busca": 0.257
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Início do fluxo 1. Configurar gatilho: \"Recebimento de mensagem\". 2. Configurar condição: Dentro do horário de atend",
+     "score_busca": 0.257
+    }
+   ]
+  },
+  {
+   "id": "pos-019",
+   "indice": 0.2,
+   "vereditos": [
+    "reprovado",
+    "reprovado",
+    "reprovado",
+    "reprovado",
+    "aprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## 3. Inatividade dentro do fluxo do Robô: A qualquer momento: --- 28/05/2026, 16:12 Manual Digisac - Configurar ga",
+     "score_busca": 0.312
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Como configurar mensagem de inatividade A mensagem de inatividade é enviada automaticamente quando não há interação,",
+     "score_busca": 0.296
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# O que não pode ser configurado no Bot Atualmente, o robô **não permite** as seguintes configurações: - Definir mais",
+     "score_busca": 0.283
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Automações Blocos voltados à integração e execução de ações automáticas externas. - Enviar Webhook: Conecta o fluxo",
+     "score_busca": 0.279
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "============================================================ SEÇÃO: Acionamento flag no robô ===========================",
+     "score_busca": 0.276
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "============================================================ SEÇÃO: Robôs Descrição: Os robôs de atendimento, ou mais co",
+     "score_busca": 0.274
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Simulador de robô O Simulador de Robô permite que você teste o seu próprio robô de atendimento de forma prática e int",
+     "score_busca": 0.274
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Robôs Os robôs de atendimento — também conhecidos como **Chatbots** ou simplesmente **Bots** — são responsáveis pelo",
+     "score_busca": 0.271
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Robô - Robô Fluxograma: Criação do Chatbot com base em fluxos visuais de interação. - Robô Construtor Legado: Versão",
+     "score_busca": 0.267
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Publique o Robô Após finalizar a configuração do robô, será necessário publicá-lo e vinculá-lo à conexão desejada. P",
+     "score_busca": 0.265
+    }
+   ]
+  },
+  {
+   "id": "neg-001",
+   "indice": 0.0,
+   "vereditos": [
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-07-16",
+     "trecho": "Pergunta: Os campos personalizados da integração RD station CRM são espelhados na Digisac? Resposta oficial validada pel",
+     "score_busca": 0.957
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# RD Station CRM Integrações Digisac - RD Station CRM Digisac Plataforma Multicanal ![img-110.jpeg](img-110.jpeg) As",
+     "score_busca": 0.37
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Requisitos para Integração: - Ter uma conta ativa no RD Station CRM. - Cada usuário da Digisac que utilizar a integra",
+     "score_busca": 0.361
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Por que integrar o RD Station CRM à Digisac? Porque você une atendimento e vendas em um só ambiente. A equipe visual",
+     "score_busca": 0.358
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Processos Integração RD Station CRM ![img-113.jpeg](img-113.jpeg)",
+     "score_busca": 0.345
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Integrações Digisac - RD Station Marketing - Etapa 1 Digisac Plataforma Multicanal ![img-131.jpeg](img-131.jpeg)",
+     "score_busca": 0.343
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Como utilizar a integração? ℹ️ Antes de iniciar a configuração da integração, é necessário realizar a contratação da",
+     "score_busca": 0.34
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Por que integrar o RD Station Marketing à Digisac? Ao integrar o RD Station Marketing com a Digisac, você conecta su",
+     "score_busca": 0.333
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Etapa 2 - Configurar a integração na RD Station Marketing Existem dois caminhos possíveis para configurar a integraçã",
+     "score_busca": 0.309
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "### Na DigiSac: - Integração cadastrada no ambiente;",
+     "score_busca": 0.308
+    }
+   ]
+  },
+  {
+   "id": "neg-003",
+   "indice": 0.0,
+   "vereditos": [
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Pergunta: preciso filtrar todos os chamados que NÃO possuem TAG, como eu faço?, eu quero filtrar de forma que possa expo",
+     "score_busca": 0.949
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Filtros por Tag no Atendimento Você pode filtrar as conversas por tags para visualizar somente os contatos classifica",
+     "score_busca": 0.321
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Remove uma tag a multiplos contatos --- Método: DELETE URL: {{URL}}/api/v1/tags/{{tagId}}/contacts Body: { \"where\"",
+     "score_busca": 0.305
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Adicionar/Remover tags em vários contatos Para adicionar ou remover tags de múltiplos contatos, siga o passo a passo",
+     "score_busca": 0.302
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Filtros disponíveis ![img-420.jpeg](img-420.jpeg) Na opção Exibir filtros, você pode refinar a busca utilizando dife",
+     "score_busca": 0.297
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Buscar Contatos por Tag Para consultas mais detalhadas, aplique filtros no menu **Contatos** e visualize apenas os co",
+     "score_busca": 0.295
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Ações em Massa Facilite o processo de exclusão de várias tags simultaneamente ou a vinculação de tags aos departament",
+     "score_busca": 0.29
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Adicona uma tag a multiplos contatos --- Método: POST URL: {{URL}}/api/v1/tags/{{tagId}}/contacts Body: { \"where\":",
+     "score_busca": 0.289
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Principais filtros disponíveis: - Tipo de período: Define se a análise será baseada na data de abertura ou encerrame",
+     "score_busca": 0.278
+    },
+    {
+     "id": "None",
+     "data": "2026-06-08",
+     "trecho": "omo configurar tags como condição no fluxo do robô Agora é possível utilizar as tags dos contatos como condição na const",
+     "score_busca": 0.277
+    }
+   ]
+  },
+  {
+   "id": "neg-005",
+   "indice": 0.0,
+   "vereditos": [
+    "reprovado",
+    "reprovado",
+    "reprovado",
+    "reprovado",
+    "reprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "============================================================ SEÇÃO: Conexões Descrição: A Digisac disponibiliza as segui",
+     "score_busca": 0.259
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# CONEXÕES (NOVA VERSÃO) Na Digisac, as conexões representam os canais de atendimento disponíveis na sua plataforma. El",
+     "score_busca": 0.233
+    },
+    {
+     "id": "None",
+     "data": "2026-05-14",
+     "trecho": "# Dúvidas? [nome] [email] N3 - Suporte",
+     "score_busca": 0.228
+    },
+    {
+     "id": "None",
+     "data": "2026-05-14",
+     "trecho": "# Análise de consumo e boas práticas em conexões. Temos dois cenários. O primeiro é que as conexões podem afetar direta",
+     "score_busca": 0.226
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Como configurar a limitação de acesso por Conexão? 1. No painel de navegação, selecione Conexões (ícone de celular).",
+     "score_busca": 0.224
+    },
+    {
+     "id": "None",
+     "data": "2026-05-14",
+     "trecho": "# TÓPICOS - SERVIDORES (VMS) - GRAFANA - ANÁLISE DE LENTIDÃO - USO DA AWX - ANÁLISE DE CONEXÃO WHATSAPP E BOAS PRÁTICA",
+     "score_busca": 0.222
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Listar conexões --- Método: GET URL: {{URL}}/api/v1/services?perPage=35",
+     "score_busca": 0.221
+    },
+    {
+     "id": "None",
+     "data": "2026-05-14",
+     "trecho": "# Servidores e consumo [nome] N3 (Suporte) ![img-0.jpeg](img-0.jpeg) ikatec",
+     "score_busca": 0.221
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Como Arquivar uma Conexão Caso uma conexão não esteja mais em uso, você pode arquivá-la para manter o registro histór",
+     "score_busca": 0.216
+    },
+    {
+     "id": "None",
+     "data": "2026-05-14",
+     "trecho": "# Acesso remoto (lentidão somente do lado do cliente) Acessar a máquina do cliente e realizar testes padrões de envio de",
+     "score_busca": 0.215
+    }
+   ]
+  },
+  {
+   "id": "neg-007",
+   "indice": 0.0,
+   "vereditos": [
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Pergunta: Como consigo puxar todos os leads unicos de um unico dia na plataforma? Resposta oficial validada pelo analist",
+     "score_busca": 0.9
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Buscar todos os chamados da plataforma --- Método: GET URL: {{URL}}/api/v1/tickets?query={\"distinct\":true,\"order\":[[",
+     "score_busca": 0.245
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Buscar todos os chamados da plataforma --- Método: GET URL: {{URL}}/api/v1/tickets?query={\"distinct\":true,\"order\":[[",
+     "score_busca": 0.245
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Criação de Oportunidade: ![img-166.jpeg](img-166.jpeg) Dentro do funil, clique em + Nova oportunidade na etapa que d",
+     "score_busca": 0.231
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Buscar pelo contactid todos os chamados do cliente trazendo quem encerrou/transferiu --- Método: GET URL: {{URL}}/ap",
+     "score_busca": 0.231
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Buscar pelo contactid todos os chamados do cliente trazendo quem encerrou/transferiu --- Método: GET URL: {{URL}}/ap",
+     "score_busca": 0.231
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Listar todos os contatos --- Método: GET URL: {{URL}}/api/v1/contacts?perPage=40",
+     "score_busca": 0.226
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Listar todos os contatos --- Método: GET URL: {{URL}}/api/v1/contacts?perPage=40",
+     "score_busca": 0.226
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Como fechar chamados em lote ℹ️ Caso possua um robô de atendimento, antes de realizar o fechamento em lote, certifiq",
+     "score_busca": 0.222
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Buscar chamados fechados por conexão --- Método: GET URL: {{URL}}/api/v1/tickets?query={\"distinct\":true,\"order\":[[\"u",
+     "score_busca": 0.219
+    }
+   ]
+  },
+  {
+   "id": "neg-009",
+   "indice": 0.0,
+   "vereditos": [
+    "reprovado",
+    "reprovado",
+    "reprovado",
+    "reprovado",
+    "reprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Pergunta: Como consigo puxar todos os leads unicos de um unico dia na plataforma? Resposta oficial validada pelo analist",
+     "score_busca": 0.338
+    },
+    {
+     "id": "None",
+     "data": "2026-04-30",
+     "trecho": "Esses eventos cobrem mensagens enviadas pelo atendente (agente de suporte) e mensagens recebidas do lead (cliente), o qu",
+     "score_busca": 0.277
+    },
+    {
+     "id": "None",
+     "data": "2026-05-14",
+     "trecho": "# Análise de Lentidão - Análise do fluxo de conversas e mensagens nos últimos 3 meses. - Analisar se há muita troca de",
+     "score_busca": 0.269
+    },
+    {
+     "id": "None",
+     "data": "2026-05-14",
+     "trecho": "# Lentidão da Plataforma - Identificar onde ocorre a lentidão. - Analisar o servidor do cliente. - Validar o problema r",
+     "score_busca": 0.263
+    },
+    {
+     "id": "None",
+     "data": "2026-04-30",
+     "trecho": "## Importante Os eventos cobrem mensagens enviadas pelo atendente e pelo lead. Para confirmar os campos do payload (cont",
+     "score_busca": 0.254
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "============================================================ SEÇÃO: Agora Descrição: Nesta função é possível visualizar",
+     "score_busca": 0.25
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "============================================================ SEÇÃO: Agora Descrição: Nesta função é possível visualizar",
+     "score_busca": 0.25
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Principais métricas disponíveis: - Tempo médio de chamados: Tempo total do atendimento, contado da abertura até o en",
+     "score_busca": 0.246
+    },
+    {
+     "id": "None",
+     "data": "2026-05-14",
+     "trecho": "# Tratativa com o cliente Quando o cliente relata lentidão na plataforma, é crucial identificar o tipo de ação afetada.",
+     "score_busca": 0.242
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Buscar estatísticas pelo status dos chamados --- Método: GET URL: {{URL}}/api/v1/dashboard/general?startPeriod={{202",
+     "score_busca": 0.242
+    }
+   ]
+  },
+  {
+   "id": "neg-010",
+   "indice": 0.0,
+   "vereditos": [
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Pergunta: e envio de template sem abrir o chamado? Resposta oficial validada pelo analista: Para enviar um template sem",
+     "score_busca": 0.783
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Como enviar um Template no Chat Para utilizar um template: 1. Dentro do Chat, selecione um chamado com um contato da",
+     "score_busca": 0.728
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Chamados via WhatsApp WABA (API Oficial) Digisac - Abertura de Chamados da conexão WhatsApp Bu Digisac Plataforma Mul",
+     "score_busca": 0.671
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Como criar um Agendamento Digisac - Agendamento de Mensagem Digisac Plataforma Multicanal ![img-82.jpeg](img-82.jpe",
+     "score_busca": 0.485
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# WABA (WhatsApp Business API) - WhatsApp Business API (WABA): É um tipo de WhatsApp voltado principalmente para empres",
+     "score_busca": 0.421
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Integrado - O MM Lite está liberado para uso. Todas as campanhas de marketing seguirão exclusivamente pelo MM Lite.",
+     "score_busca": 0.414
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Enviar template com botão --- Método: POST URL: {{URL}}/api/v1/messages Body: { \"type\": \"chat\", \"number\": \"{",
+     "score_busca": 0.34
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Envio de template com dois par\"metros --- Método: POST URL: {{URL}}/api/v1/messages Body: { \"type\": \"chat\", \"num",
+     "score_busca": 0.336
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Enviar template com URL no botão --- Método: POST URL: {{URL}}/api/v1/messages Body: { \"type\": \"chat\", \"cont",
+     "score_busca": 0.334
+    },
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Pergunta: Qual a opção para que eu possa enviar 2 templates seguidos? Resposta oficial validada pelo analista: Para envi",
+     "score_busca": 0.31
+    }
+   ]
+  },
+  {
+   "id": "neg-011",
+   "indice": 0.0,
+   "vereditos": [
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Pergunta: duvida do cliente Preciso enviar agora no meio do ano os boletos de renovação para cada um dos meus clientes.",
+     "score_busca": 0.979
+    },
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Pergunta: Preciso enviar agora no meio do ano os boletos de renovação para cada um dos meus clientes. Enviamos sempre o",
+     "score_busca": 0.467
+    },
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Integração desenvolvida pela equipe de vocês: caso possuam uma equipe de desenvolvimento, podemos disponibilizar a docum",
+     "score_busca": 0.34
+    },
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Integração desenvolvida pela equipe de vocês: caso possuam uma equipe de desenvolvimento, podemos disponibilizar a docum",
+     "score_busca": 0.34
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Configure redirecionamento automático de atendimentos para o setor responsável O redirecionamento automático permite",
+     "score_busca": 0.278
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "============================================================ SEÇÃO: Robôs Descrição: Os robôs de atendimento, ou mais co",
+     "score_busca": 0.27
+    },
+    {
+     "id": "None",
+     "data": "2026-05-14",
+     "trecho": "# Atendimento ao Robô - Entender a solicitação do cliente. - Encaminhar para o time de bot se possível. - Se não for po",
+     "score_busca": 0.266
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Automações Blocos voltados à integração e execução de ações automáticas externas. - Enviar Webhook: Conecta o fluxo",
+     "score_busca": 0.265
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Fluxograma Os Robôs de Atendimento são responsáveis pelo primeiro contato com seus clientes dentro da Digisac. Ele fo",
+     "score_busca": 0.26
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Início do fluxo 1. Configurar gatilho: \"Recebimento de mensagem\". 2. Configurar condição: Dentro do horário de atend",
+     "score_busca": 0.259
+    }
+   ]
+  },
+  {
+   "id": "neg-012",
+   "indice": 0.0,
+   "vereditos": [
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Pergunta: A digisac tem limite de envio de arquivos ? Resposta oficial validada pelo analista: A Digisac não possui um l",
+     "score_busca": 0.835
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Limite e Restrição de Envio de Template Caso o tipo de conta selecionada no provedor seja da Ikatec, cuja gestão é re",
+     "score_busca": 0.294
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## 5. Por que alguns envios podem ser bloqueados automaticamente na Digisac? Para proteger sua conta e evitar penalizaç",
+     "score_busca": 0.286
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## IMPORTANTE! Sobre o SERVIDOR da plataforma. Assim que contrata o Digisac não normalmente já disponibilizamos um ser",
+     "score_busca": 0.278
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Mensagem privada ![img-395.jpeg](img-395.jpeg) - A resposta é enviada somente para o e-mail do reclamante; - Permite",
+     "score_busca": 0.278
+    },
+    {
+     "id": "None",
+     "data": "2026-05-14",
+     "trecho": "# Banimento Recomendações digisac",
+     "score_busca": 0.267
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Anexos (Arquivos, Fotos, Vídeos e Contatos) No chat de atendimento, é possível anexar e enviar diferentes tipos de ar",
+     "score_busca": 0.266
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Chat - E-mail Ao abrir uma conversa vinda da conexão de e-mail, você verá funcionalidades específicas desse canal: -",
+     "score_busca": 0.266
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Bloqueio de extensões de arquivo A Digisac permite configurar o bloqueio de extensões de arquivos recebidos pela cone",
+     "score_busca": 0.263
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Na Digisac: - Caso queira enviar mensagens através da integração, é necessário ter uma Conexão oficial ativa. &gt;",
+     "score_busca": 0.258
+    }
+   ]
+  },
+  {
+   "id": "neg-014",
+   "indice": 0.0,
+   "vereditos": [
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Pergunta: Qual a opção para que eu possa enviar 2 templates seguidos? Resposta oficial validada pelo analista: Para envi",
+     "score_busca": 0.894
+    },
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Pergunta: Qual a opção para que eu possa enviar 2 templates antes de 24 horas. Resposta oficial validada pelo analista:",
+     "score_busca": 0.34
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Envio de template com dois par\"metros --- Método: POST URL: {{URL}}/api/v1/messages Body: { \"type\": \"chat\", \"num",
+     "score_busca": 0.337
+    },
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Pergunta: e envio de template sem abrir o chamado? Resposta oficial validada pelo analista: Para enviar um template sem",
+     "score_busca": 0.31
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Como enviar um Template no Chat Para utilizar um template: 1. Dentro do Chat, selecione um chamado com um contato da",
+     "score_busca": 0.31
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Enviar template com botão --- Método: POST URL: {{URL}}/api/v1/messages Body: { \"type\": \"chat\", \"number\": \"{",
+     "score_busca": 0.307
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Enviar template com URL no botão --- Método: POST URL: {{URL}}/api/v1/messages Body: { \"type\": \"chat\", \"cont",
+     "score_busca": 0.298
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Regras: - O nome deve conter apenas caracteres alfanuméricos minúsculos (letras a-z e dígitos 0-9) e o caractere und",
+     "score_busca": 0.296
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Envio para aprovação Após salvar o template, é necessário enviá-lo para aprovação da Meta. Para isso, siga o passo a",
+     "score_busca": 0.291
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Limite e Restrição de Envio de Template Caso o tipo de conta selecionada no provedor seja da Ikatec, cuja gestão é re",
+     "score_busca": 0.289
+    }
+   ]
+  },
+  {
+   "id": "pos-001",
+   "indice": 0.0,
+   "vereditos": [
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Enviar template com botão --- Método: POST URL: {{URL}}/api/v1/messages Body: { \"type\": \"chat\", \"number\": \"{",
+     "score_busca": 0.347
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Enviar template com URL no botão --- Método: POST URL: {{URL}}/api/v1/messages Body: { \"type\": \"chat\", \"cont",
+     "score_busca": 0.339
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Envio de template com dois par\"metros --- Método: POST URL: {{URL}}/api/v1/messages Body: { \"type\": \"chat\", \"num",
+     "score_busca": 0.338
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Cenários antes da ativação do WhatsApp Coexistence (CoEx) Antes de ativar o WhatsApp Coexistence (CoEx), é fundamental",
+     "score_busca": 0.338
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Enviar template para aprovação --- Método: POST URL: {{URL}}/api/v1/whatsapp-business-templates/{{hsmId}}/send-to-re",
+     "score_busca": 0.326
+    },
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Pergunta: Qual a opção para que eu possa enviar 2 templates seguidos? Resposta oficial validada pelo analista: Para envi",
+     "score_busca": 0.322
+    },
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Pergunta: e envio de template sem abrir o chamado? Resposta oficial validada pelo analista: Para enviar um template sem",
+     "score_busca": 0.322
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Como enviar um Template no Chat Para utilizar um template: 1. Dentro do Chat, selecione um chamado com um contato da",
+     "score_busca": 0.31
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Criar template somente com texto --- Método: POST URL: {{URL}}/api/v1/whatsapp-business-templates Body: { \"name\":",
+     "score_busca": 0.308
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Sincronizar templates com o provedor --- Método: POST URL: {{URL}}/api/v1/whatsapp-business-templates/refresh-templa",
+     "score_busca": 0.303
+    }
+   ]
+  },
+  {
+   "id": "pos-002",
+   "indice": 0.0,
+   "vereditos": [
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "============================================================ SEÇÃO: Tags Descrição: As Tags são como etiquetas que têm c",
+     "score_busca": 0.415
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# TAGS As Tags são utilizadas para identificar e classificar conversas, tornando mais fácil organizar o atendimento e l",
+     "score_busca": 0.385
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Exibição das tags no chat Gerencie como as tags aparecem durante o atendimento para facilitar a identificação e o aco",
+     "score_busca": 0.354
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Como Atribuir Tags aos Contatos 1. No painel de atendimento, abra a conversa do contato. 2. Clique nos três pontinhos",
+     "score_busca": 0.34
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Criar uma Nova Tag Para criar uma tag: 1. No painel de navegação, selecione Tags (ícone de etiqueta). 2. Clique em +",
+     "score_busca": 0.339
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Criar tag --- Método: POST URL: {{URL}}/api/v1/tags Body: { \"label\": \"{{name}}\", //nome da tag \"backgroundCo",
+     "score_busca": 0.337
+    },
+    {
+     "id": "None",
+     "data": "2026-06-08",
+     "trecho": "Como configurar tags no fluxograma Atenção: Se você já possui um robô criado e deseja adicionar essa configuração, acess",
+     "score_busca": 0.33
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Opções disponíveis: - Exibir tags na listagem de chamados abertos: Ative para que as tags apareçam diretamente na vis",
+     "score_busca": 0.328
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Configurações de Exibição Acesse **Mais opções &gt; Empresa** para gerenciar como as tags aparecem no chat: - **Exi",
+     "score_busca": 0.326
+    },
+    {
+     "id": "None",
+     "data": "2026-06-08",
+     "trecho": "omo configurar tags como condição no fluxo do robô Agora é possível utilizar as tags dos contatos como condição na const",
+     "score_busca": 0.325
+    }
+   ]
+  },
+  {
+   "id": "pos-003",
+   "indice": 0.0,
+   "vereditos": [
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# O que é possível fazer com blocos de requisição http: - Realizar chamadas HTTP nos seguintes métodos: - GET - pedir i",
+     "score_busca": 0.315
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Como configurar blocos de requisição http O bloco Requisição HTTP permite que o robô se conecte diretamente a APIs ex",
+     "score_busca": 0.301
+    },
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Integração desenvolvida pela equipe de vocês: caso possuam uma equipe de desenvolvimento, podemos disponibilizar a docum",
+     "score_busca": 0.296
+    },
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Integração desenvolvida pela equipe de vocês: caso possuam uma equipe de desenvolvimento, podemos disponibilizar a docum",
+     "score_busca": 0.296
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Exemplos práticos de ações realizáveis com Bloco HTTP | Exemplos práticos do que é possível fazer com cada tipo de r",
+     "score_busca": 0.288
+    },
+    {
+     "id": "None",
+     "data": "2026-05-14",
+     "trecho": "# Dúvidas sobre API - Entender a situação ou dúvida do cliente. - Explicar a rota necessária. - Compartilhar a document",
+     "score_busca": 0.288
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Como utilizar condicionais ligadas ao bloco de requisição http Você pode conectar blocos de condição após blocos de r",
+     "score_busca": 0.28
+    },
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Pergunta: duvida do cliente Preciso enviar agora no meio do ano os boletos de renovação para cada um dos meus clientes.",
+     "score_busca": 0.27
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Como configurar blocos de requisição http 1. No Menu Principal, acesse Mais opções &gt; Robôs. --- 28/05/2026, 16:1",
+     "score_busca": 0.269
+    },
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Pergunta: Preciso enviar agora no meio do ano os boletos de renovação para cada um dos meus clientes. Enviamos sempre o",
+     "score_busca": 0.264
+    }
+   ]
+  },
+  {
+   "id": "pos-004",
+   "indice": 0.0,
+   "vereditos": [
+    "reprovado",
+    "reprovado",
+    "reprovado",
+    "reprovado",
+    "reprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Como criar um novo Usuário Na tela de usuários, clique em + Adicionar. --- 28/05/2026, 16:12 Manual Digisac ![img",
+     "score_busca": 0.282
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Criar usuário --- Método: POST URL: {{URL}}/api/v1/users Body: { \"accountId\": \"{{accountId}}\", //id conta \"email\": {",
+     "score_busca": 0.279
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Preencha as seguintes informações: ![img-56.jpeg](img-56.jpeg) --- 28/05/2026, 16:12 Manual Digisac ![img-57.jpeg",
+     "score_busca": 0.278
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Como criar um usuário do tipo \"Conta de Cliente\" 1. No Menu Principal, clique em **Mais Opções** acesse **Usuários**.",
+     "score_busca": 0.265
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "============================================================ SEÇÃO: Usuários Descrição: Os usuários são os responsáveis",
+     "score_busca": 0.261
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Gerenciamento de Usuários ![img-59.jpeg](img-59.jpeg) Para visualizar, editar, redefinir senha, arquivar ou desbloqu",
+     "score_busca": 0.255
+    },
+    {
+     "id": "None",
+     "data": "2026-05-15",
+     "trecho": "Para criar um Token, siga os passos abaixo:",
+     "score_busca": 0.254
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Usuários A aba Usuários permite visualizar e gerenciar todos os usuários cadastrados na plataforma. Para acessá-la,",
+     "score_busca": 0.254
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# ARQUIVADOS ![img-210.jpeg](img-210.jpeg) --- 28/05/2026, 16:12 Manual Digisac ![img-211.jpeg](img-211.jpeg) GRUPO",
+     "score_busca": 0.253
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Primeiras Configurações ![img-2.jpeg](img-2.jpeg) 1. Criação de Departamento - Setores de atendimento da sua empresa",
+     "score_busca": 0.251
+    }
+   ]
+  },
+  {
+   "id": "pos-005",
+   "indice": 0.0,
+   "vereditos": [
+    "reprovado",
+    "reprovado",
+    "reprovado",
+    "reprovado",
+    "reprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Chamados via WhatsApp Standard Na conexão WhatsApp Standard, após preencher os campos e abrir o chamado, o chat de at",
+     "score_busca": 0.325
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Como criar uma conexão Standard Para iniciar a criação da nova conexão, siga os passos abaixo: 1. No menu principal,",
+     "score_busca": 0.318
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# WhatsApp Standard (Messenger ou Business) A conexão de WhatsApp Standard permite espelhar o seu WhatsApp Web diretame",
+     "score_busca": 0.301
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Informações e Requisitos para Utilizar o WhatsApp Standard Quando você utiliza uma conexão Standard do WhatsApp, ou s",
+     "score_busca": 0.278
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "============================================================ SEÇÃO: Conexões Descrição: A Digisac disponibiliza as segui",
+     "score_busca": 0.269
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Na Digisac: - Uma **conexão WhatsApp Standard ativa**; - Preferencialmente, um **robô criado**, para receber a flag",
+     "score_busca": 0.266
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# CONEXÕES (NOVA VERSÃO) Na Digisac, as conexões representam os canais de atendimento disponíveis na sua plataforma. El",
+     "score_busca": 0.248
+    },
+    {
+     "id": "None",
+     "data": "2026-05-14",
+     "trecho": "# Arquivar Conexão - Entender qual conexão deseja arquivar. - Explicar que arquivar fecha os chamados que estão abertos",
+     "score_busca": 0.233
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Cuidados e Riscos de Banimento Por não ser uma conexão oficial (WABA), o WhatsApp Standard está mais sujeito aos bani",
+     "score_busca": 0.231
+    },
+    {
+     "id": "None",
+     "data": "2026-05-14",
+     "trecho": "# TÓPICOS - SERVIDORES (VMS) - GRAFANA - ANÁLISE DE LENTIDÃO - USO DA AWX - ANÁLISE DE CONEXÃO WHATSAPP E BOAS PRÁTICA",
+     "score_busca": 0.223
+    }
+   ]
+  },
+  {
+   "id": "pos-006",
+   "indice": 0.0,
+   "vereditos": [
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Exportar Dados do Funil de Vendas: Digisac - Funil de Vendas - Filtrar e Exportar Relatórios Digisac Plataforma Mult",
+     "score_busca": 0.308
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Estatísticas de Atendimentos (nova versão) ![img-12.jpeg](img-12.jpeg) A seção Estatísticas de Atendimentos permite",
+     "score_busca": 0.306
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Estatísticas de Atendimentos (versão antiga) A seção Estatísticas de Atendimentos permite analisar o desempenho dos a",
+     "score_busca": 0.298
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Acompanhamento - Relatório de Campanhas Assim como nas campanhas de SMS, após sua criação e/ou envio, você pode acomp",
+     "score_busca": 0.297
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Exportar Informações do Relatório Os dados das Estatísticas de Atendimentos podem ser exportados para um arquivo Exc",
+     "score_busca": 0.295
+    },
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Pergunta: Como consigo puxar todos os leads unicos de um unico dia na plataforma? Resposta oficial validada pelo analist",
+     "score_busca": 0.291
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Histórico de Chamados O Histórico de Chamados é um dos relatórios mais completos da Digisac para análise de atendimen",
+     "score_busca": 0.291
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Acompanhamento Após a campanha criada e/ou enviada, você pode acompanhar as informações da mesma. Para isso: - Na se",
+     "score_busca": 0.287
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# CONTATOS Os contatos são os números dos seus clientes salvos dentro da DigiSac. No painel de navegação, clicando no",
+     "score_busca": 0.287
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Exportação de contatos Digisac - Exportar Contatos Digisac Plataforma Multicanal ![img-204.jpeg](img-204.jpeg) Par",
+     "score_busca": 0.286
+    }
+   ]
+  },
+  {
+   "id": "pos-007",
+   "indice": 0.0,
+   "vereditos": [
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Pergunta: Como consigo puxar todos os leads unicos de um unico dia na plataforma? Resposta oficial validada pelo analist",
+     "score_busca": 0.258
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Principais filtros disponíveis: - Tipo de período: Define se a análise será baseada na data de abertura ou encerrame",
+     "score_busca": 0.252
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Filtros disponíveis - Tipo do período: Define se a análise será baseada na data de abertura ou na data de encerramen",
+     "score_busca": 0.246
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Contatos Nesta seção, você pode visualizar e gerenciar todos os contatos e grupos cadastrados na sua plataforma. Alé",
+     "score_busca": 0.243
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Gráficos e Métricas Disponíveis ![img-16.jpeg](img-16.jpeg) ![img-17.jpeg](img-17.jpeg) - Média do 1º tempo de espe",
+     "score_busca": 0.242
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Dicas úteis: - Use filtros e pesquisas para localizar contatos rapidamente. - Aproveite a fila organizada para prior",
+     "score_busca": 0.241
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Por assunto (gráfico) Mostra as métricas de atendimento em gráficos por assunto de chamado. ![img-33.jpeg](img-33.j",
+     "score_busca": 0.241
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Filtros disponíveis ![img-420.jpeg](img-420.jpeg) Na opção Exibir filtros, você pode refinar a busca utilizando dife",
+     "score_busca": 0.24
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Maio 2026 - Novidade - Assuntos de chamado por departamento: Ao criar um assunto de chamado, é possível vincular a d",
+     "score_busca": 0.239
+    },
+    {
+     "id": "None",
+     "data": "2026-05-14",
+     "trecho": "## Evite comunicações ativas frequentes Esta ação pode resultar em denúncias por parte dos receptores, é importante que",
+     "score_busca": 0.239
+    }
+   ]
+  },
+  {
+   "id": "pos-008",
+   "indice": 0.0,
+   "vereditos": [
+    "reprovado",
+    "reprovado",
+    "reprovado",
+    "reprovado",
+    "reprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## 6. O que fazer se sua saúde cair? Se a saúde do número ficar amarela ou vermelha: 1. Pause campanhas de grande volu",
+     "score_busca": 0.218
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "### Saúde da conta (número WABA) Reflete como seus contatos percebem sua empresa. Quando a saúde está baixa, o WhatsAp",
+     "score_busca": 0.214
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Saúde da Conexão WABA (WABA Health) A saúde da conexão WABA é fundamental para garantir que seu número permaneça ativ",
+     "score_busca": 0.185
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## 7. Boas práticas essenciais para manter seu número saudável ☑ Envie apenas para quem deu consentimento Evite listas",
+     "score_busca": 0.178
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Saúde WABA Digisac - Saúde WABA Digisac Plataforma Multicanal ![img-417.jpeg](img-417.jpeg) Assista no A aba Saúd",
+     "score_busca": 0.174
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## 2. Como a Meta analisa a Saúde de uma conta WABA? A Meta analisa separadamente a saúde do número e a saúde dos templ",
+     "score_busca": 0.172
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Como verificar a saúde da conexão: No menu principal, acesse Visão Geral → Agora → Saúde WABA para verificar o statu",
+     "score_busca": 0.167
+    },
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Essas ferramentas visam otimizar e automatizar processos de atendimento, tornando-os mais eficientes. Se precisar de mai",
+     "score_busca": 0.164
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Áudios Durante o atendimento, é possível ouvir e acelerar os áudios recebidos. Para aumentar a velocidade da reprodu",
+     "score_busca": 0.162
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Consumo de IA Visão geral Histórico O limite de alguns serviços foram atingidos. Entre em contato com o nosso suport",
+     "score_busca": 0.161
+    }
+   ]
+  },
+  {
+   "id": "pos-010",
+   "indice": 0.0,
+   "vereditos": [
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Visualizar quem criou e enviou uma campanha --- Método: GET URL: {{URL}}/api/v1/campaigns?query={\"where\":{\"$and\":[{\"",
+     "score_busca": 0.347
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Acompanhamento - Relatório de Campanhas Assim como nas campanhas de SMS, após sua criação e/ou envio, você pode acomp",
+     "score_busca": 0.346
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Acompanhamento Após a campanha criada e/ou enviada, você pode acompanhar as informações da mesma. Para isso: - Na se",
+     "score_busca": 0.345
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# CAMPANHAS A funcionalidade de Campanhas permite enviar mensagens de marketing via SMS ou Conexão Oficial do WhatsApp",
+     "score_busca": 0.337
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Como criar uma Campanha WABA 1. Na seção Campanha (ícone de megafone do Menu Principal), clique em W/Business. ![img",
+     "score_busca": 0.304
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Ver gráfico ① Ao clicar em Ver detalhes em um gráfico, você poderá visualizar informações adicionais sobre a seção e",
+     "score_busca": 0.303
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Integrado - O MM Lite está liberado para uso. Todas as campanhas de marketing seguirão exclusivamente pelo MM Lite.",
+     "score_busca": 0.302
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Como criar uma Campanha SMS 1. Na seção Campanha (ícone de megafone do Menu Principal), clique em SMS. ![img-258.jpe",
+     "score_busca": 0.298
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Extrair status de uma campanha --- Método: GET URL: {{URL}}/api/v1/campaigns/{{campaignId}}/stats",
+     "score_busca": 0.296
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Exportar resultados da campanha --- Método: POST URL: {{URL}}/api/v1/campaigns/export/csv",
+     "score_busca": 0.29
+    }
+   ]
+  },
+  {
+   "id": "pos-011",
+   "indice": 0.0,
+   "vereditos": [
+    "reprovado",
+    "reprovado",
+    "reprovado",
+    "reprovado",
+    "reprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "============================================================ SEÇÃO: Agendamentos Descrição: Os agendamentos são utilizad",
+     "score_busca": 0.374
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Agendamentos Os Agendamentos permitem programar ações automáticas na plataforma para uma data e horário específicos.",
+     "score_busca": 0.362
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Regras Importantes: Antes de criar um agendamento, atente-se às seguintes regras: - ☑ Não é recorrente: Caso precis",
+     "score_busca": 0.349
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Agendamentos A aba Agendamentos permite acompanhar e criar compromissos com clientes diretamente pela plataforma. Pa",
+     "score_busca": 0.346
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Criar agendamento --- Método: POST URL: {{URL}}/api/v1/schedule Body: { \"contactId\": \"{{contactId}}\", \"departmen",
+     "score_busca": 0.342
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Como criar um Agendamento Digisac - Agendamento de Mensagem Digisac Plataforma Multicanal ![img-82.jpeg](img-82.jpe",
+     "score_busca": 0.331
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Editar agendamento --- Método: PUT URL: {{URL}}/api/v1/schedule/{{scheduleId}} Body: { \"contactId\": \"{{contactId}}",
+     "score_busca": 0.319
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Listar agendamentos --- Método: GET URL: {{URL}}/api/v1/schedule?perPage=40",
+     "score_busca": 0.311
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Buscar agendamento --- Método: GET URL: {{URL}}/api/v1/schedule/{{scheduleId}}",
+     "score_busca": 0.298
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Agendamento Automático: - Feegow; SerOdonto; Flychat; etc.",
+     "score_busca": 0.288
+    }
+   ]
+  },
+  {
+   "id": "pos-012",
+   "indice": 0.0,
+   "vereditos": [
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Pergunta: preciso filtrar todos os chamados que NÃO possuem TAG, como eu faço?, eu quero filtrar de forma que possa expo",
+     "score_busca": 0.927
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Filtros por Tag no Atendimento Você pode filtrar as conversas por tags para visualizar somente os contatos classifica",
+     "score_busca": 0.304
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Filtros disponíveis ![img-420.jpeg](img-420.jpeg) Na opção Exibir filtros, você pode refinar a busca utilizando dife",
+     "score_busca": 0.287
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Remove uma tag a multiplos contatos --- Método: DELETE URL: {{URL}}/api/v1/tags/{{tagId}}/contacts Body: { \"where\"",
+     "score_busca": 0.274
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Ações em Massa Facilite o processo de exclusão de várias tags simultaneamente ou a vinculação de tags aos departament",
+     "score_busca": 0.273
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Filtros disponíveis - Tipo do período: Define se a análise será baseada na data de abertura ou na data de encerramen",
+     "score_busca": 0.27
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Principais filtros disponíveis: - Tipo de período: Define se a análise será baseada na data de abertura ou encerrame",
+     "score_busca": 0.269
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Buscar Contatos por Tag Para consultas mais detalhadas, aplique filtros no menu **Contatos** e visualize apenas os co",
+     "score_busca": 0.269
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Adicionar/Remover tags em vários contatos Para adicionar ou remover tags de múltiplos contatos, siga o passo a passo",
+     "score_busca": 0.268
+    },
+    {
+     "id": "None",
+     "data": "2026-06-08",
+     "trecho": "omo configurar tags como condição no fluxo do robô Agora é possível utilizar as tags dos contatos como condição na const",
+     "score_busca": 0.258
+    }
+   ]
+  },
+  {
+   "id": "pos-013",
+   "indice": 0.0,
+   "vereditos": [
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# CAMPANHAS A funcionalidade de Campanhas permite enviar mensagens de marketing via SMS ou Conexão Oficial do WhatsApp",
+     "score_busca": 0.348
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Mensagens Interativas ① Disponível apenas para clientes que possuem conexão com o WhatsApp Business API. As Mensagen",
+     "score_busca": 0.332
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Waba (WhatsApp Business API) Para usar campanhas via WhatsApp, é necessário possuir a conta WhatsApp Business API con",
+     "score_busca": 0.305
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# WABA (WhatsApp Business API) - WhatsApp Business API (WABA): É um tipo de WhatsApp voltado principalmente para empres",
+     "score_busca": 0.301
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Como criar uma Campanha WABA 1. Na seção Campanha (ícone de megafone do Menu Principal), clique em W/Business. ![img",
+     "score_busca": 0.299
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Como criar uma Campanha SMS 1. Na seção Campanha (ícone de megafone do Menu Principal), clique em SMS. ![img-258.jpe",
+     "score_busca": 0.293
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Créditos para envio de SMS Com a conexão criada, é necessário entrar em contato com o setor comercial da Digisac para",
+     "score_busca": 0.288
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Integrado - O MM Lite está liberado para uso. Todas as campanhas de marketing seguirão exclusivamente pelo MM Lite.",
+     "score_busca": 0.288
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "============================================================ SEÇÃO: Mensagens interativas Descrição: As mensagens intera",
+     "score_busca": 0.284
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Tipos de Conexão A Digisac disponibiliza as seguintes conexões de atendimento: - WhatsApp; - WhatsApp Business API;",
+     "score_busca": 0.282
+    }
+   ]
+  },
+  {
+   "id": "pos-015",
+   "indice": 0.0,
+   "vereditos": [
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": false,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Filtros por Tag no Atendimento Você pode filtrar as conversas por tags para visualizar somente os contatos classifica",
+     "score_busca": 0.282
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Como configurar 1. Atenção: Se você já possui um robô criado e deseja adicionar essa configuração, acesse a listagem",
+     "score_busca": 0.277
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Como configurar tags como condição no fluxo do robô Agora é possível utilizar as tags dos contatos como condição na c",
+     "score_busca": 0.275
+    },
+    {
+     "id": "None",
+     "data": "2026-06-08",
+     "trecho": "omo configurar tags como condição no fluxo do robô Agora é possível utilizar as tags dos contatos como condição na const",
+     "score_busca": 0.275
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# TAGS As Tags são utilizadas para identificar e classificar conversas, tornando mais fácil organizar o atendimento e l",
+     "score_busca": 0.274
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Criar uma Nova Tag Para criar uma tag: 1. No painel de navegação, selecione Tags (ícone de etiqueta). 2. Clique em +",
+     "score_busca": 0.274
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Criando um Novo Funil ```mermaid graph TD A[Digisac - Criação do Funil de Vendas] --&gt; B[Digisac Plataforma Multic",
+     "score_busca": 0.272
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Criação de Oportunidade: ![img-166.jpeg](img-166.jpeg) Dentro do funil, clique em + Nova oportunidade na etapa que d",
+     "score_busca": 0.269
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Ações em Massa Facilite o processo de exclusão de várias tags simultaneamente ou a vinculação de tags aos departament",
+     "score_busca": 0.268
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Exibição das tags no chat Gerencie como as tags aparecem durante o atendimento para facilitar a identificação e o aco",
+     "score_busca": 0.268
+    }
+   ]
+  },
+  {
+   "id": "pos-016",
+   "indice": 0.0,
+   "vereditos": [
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": false,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## 4. Definir Comandos e Transferência de Chamados: - Uma nova janela será aberta e você definirá as ações fixas que es",
+     "score_busca": 0.317
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Configure redirecionamento automático de atendimentos para o setor responsável O redirecionamento automático permite",
+     "score_busca": 0.313
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Inteligência Artificial - Resumo Automático de IA nos Atendimentos: Defina em quais momentos a plataforma deve gerar",
+     "score_busca": 0.293
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# 2. Usar o Copiloto durante um atendimento - Durante a conversa com o cliente, você pode localizar o botão \"Copiloto d",
+     "score_busca": 0.289
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## 3. Inatividade dentro do fluxo do Robô: A qualquer momento: --- 28/05/2026, 16:12 Manual Digisac - Configurar ga",
+     "score_busca": 0.287
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## A qualquer momento: - Configurar gatilho: \"Chamado inativo\". - Configurar condição: Mensagem foi enviada pelo atende",
+     "score_busca": 0.285
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## 17 Outubro 2025 - **Limitação de Conexão por Usuário**: Novo controle de acesso individual às conexões, permitindo d",
+     "score_busca": 0.285
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Transferir e Encerrar Chamados Essas ações permitem gerenciar o ciclo completo de um atendimento — desde a mudança de",
+     "score_busca": 0.284
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Agente Inteligente ① Ferramenta contratada à parte. Para mais informações, entre em contato com o time de Atendimento",
+     "score_busca": 0.283
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# CHAT DE ATENDIMENTO O Chat de Atendimento é o espaço central de comunicação entre sua equipe e os clientes na platafo",
+     "score_busca": 0.282
+    }
+   ]
+  },
+  {
+   "id": "pos-017",
+   "indice": 0.0,
+   "vereditos": [
+    "reprovado",
+    "reprovado",
+    "reprovado",
+    "reprovado",
+    "reprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Criar uma Nova Tag Para criar uma tag: 1. No painel de navegação, selecione Tags (ícone de etiqueta). 2. Clique em +",
+     "score_busca": 0.31
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Criar tag --- Método: POST URL: {{URL}}/api/v1/tags Body: { \"label\": \"{{name}}\", //nome da tag \"backgroundCo",
+     "score_busca": 0.305
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Como Atribuir Tags aos Contatos 1. No painel de atendimento, abra a conversa do contato. 2. Clique nos três pontinhos",
+     "score_busca": 0.304
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Ações em Massa Facilite o processo de exclusão de várias tags simultaneamente ou a vinculação de tags aos departament",
+     "score_busca": 0.297
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "--- Editar tag --- Método: PUT URL: {{URL}}/api/v1/tags/{{tagId}} Body: { \"label\": \"{{name}}\", //nome da tag \"ba",
+     "score_busca": 0.292
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Configurações de Exibição Acesse **Mais opções &gt; Empresa** para gerenciar como as tags aparecem no chat: - **Exi",
+     "score_busca": 0.291
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Exibição das tags no chat Gerencie como as tags aparecem durante o atendimento para facilitar a identificação e o aco",
+     "score_busca": 0.287
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Adicionar/Remover tags em vários contatos Para adicionar ou remover tags de múltiplos contatos, siga o passo a passo",
+     "score_busca": 0.281
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Gestão de Grupos Após criar o grupo, é possível adicionar novos membros a qualquer momento. Para isso, clique nos trê",
+     "score_busca": 0.279
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "============================================================ SEÇÃO: Tags Descrição: As Tags são como etiquetas que têm c",
+     "score_busca": 0.277
+    }
+   ]
+  },
+  {
+   "id": "pos-018",
+   "indice": 0.0,
+   "vereditos": [
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado",
+    "aprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-05-14",
+     "trecho": "## Perfil da empresa no WhatsApp Recomendamos que mantenham completo os dados do perfil com informações reais e atualiz",
+     "score_busca": 0.28
+    },
+    {
+     "id": "None",
+     "data": "2026-05-14",
+     "trecho": "# OPÇÃO PARA SOLICITAR ANÁLISE Quando houver possibilidade de revisão, o próprio WhatsApp exibirá na parte inferior da",
+     "score_busca": 0.259
+    },
+    {
+     "id": "None",
+     "data": "2026-04-14",
+     "trecho": "============================================================ SEÇÃO: WhatsApp ===========================================",
+     "score_busca": 0.259
+    },
+    {
+     "id": "None",
+     "data": "2026-05-14",
+     "trecho": "# A estrutura mais segura costuma ser: - Informar que solicita a revisão do número; - Explicar de forma breve como ele",
+     "score_busca": 0.255
+    },
+    {
+     "id": "None",
+     "data": "2026-05-14",
+     "trecho": "# Conexão Oficial (WhatsApp Business API) - Entender a situação relatada. - Verificar instabilidades nos brokers [statu",
+     "score_busca": 0.253
+    },
+    {
+     "id": "None",
+     "data": "2026-05-14",
+     "trecho": "# IMPORTANTE: Antes de conectar à plataforma, inicie a conexão simultânea em pelo menos duas máquinas no WhatsApp Web e",
+     "score_busca": 0.252
+    },
+    {
+     "id": "None",
+     "data": "2026-05-14",
+     "trecho": "## IMPORTANTE: Recomendamos fortemente que para melhor desempenho empresarial de sua conta WhatsApp, a empresa contrate",
+     "score_busca": 0.251
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Recuperar Senha Caso você tenha esquecido da sua senha, siga os passos abaixo para redefinir uma nova senha: - Acess",
+     "score_busca": 0.245
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Atualizar Senha Para alterar a sua senha é simples! Basta seguir os passos abaixo: - No menu principal, selecione o",
+     "score_busca": 0.245
+    },
+    {
+     "id": "None",
+     "data": "2026-05-14",
+     "trecho": "# DESBANIMENTO: OPÇÕES PARA SOLICITAR O DESBANIMENTO. 1. Aplicativo WhatsApp onde o número foi banido Acesse a opção *",
+     "score_busca": 0.244
+    }
+   ]
+  },
+  {
+   "id": "pos-020",
+   "indice": 0.0,
+   "vereditos": [
+    "reprovado",
+    "reprovado",
+    "reprovado",
+    "reprovado",
+    "reprovado"
+   ],
+   "erros": 0,
+   "conflito_potencial": true,
+   "chunks": [
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Funcionamento do fluxo - Novos atendimentos entram automaticamente na Fila de chamados; - O time move os cards entre",
+     "score_busca": 0.283
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## 4. Definir Comandos e Transferência de Chamados: - Uma nova janela será aberta e você definirá as ações fixas que es",
+     "score_busca": 0.282
+    },
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Integração desenvolvida pela equipe de vocês: caso possuam uma equipe de desenvolvimento, podemos disponibilizar a docum",
+     "score_busca": 0.274
+    },
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Integração desenvolvida pela equipe de vocês: caso possuam uma equipe de desenvolvimento, podemos disponibilizar a docum",
+     "score_busca": 0.274
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Como funciona a distribuição na prática - Somente usuários online recebem chamados. - Os chamados saem da fila do dep",
+     "score_busca": 0.274
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## A qualquer momento: - Configurar gatilho: \"Chamado inativo\". - Configurar condição: Mensagem foi enviada pelo atende",
+     "score_busca": 0.274
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Agendamentos Os Agendamentos permitem programar ações automáticas na plataforma para uma data e horário específicos.",
+     "score_busca": 0.273
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "## Início do Fluxo 1. Configurar Gatilho: \"Recebimento de mensagem\" 2. Configurar Condição: \"Dentro do horário de atend",
+     "score_busca": 0.272
+    },
+    {
+     "id": "None",
+     "data": "2026-07-17",
+     "trecho": "Pergunta: duvida do cliente Preciso enviar agora no meio do ano os boletos de renovação para cada um dos meus clientes.",
+     "score_busca": 0.272
+    },
+    {
+     "id": "None",
+     "data": "2026-05-28",
+     "trecho": "# Fila de atendimento Na Fila de Atendimento, você visualiza todos os clientes que estão aguardando atendimento nos dep",
+     "score_busca": 0.271
+    }
+   ]
+  }
+ ]
+}

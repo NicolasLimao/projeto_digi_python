@@ -54,6 +54,13 @@ def test_conflito_potencial_por_datas():
     assert det.conflito_potencial(um_so) is False
 
 
+def test_redigir_mascara_email_e_preserva_texto_normal():
+    assert det._redigir("contate fulano.tal@exemplo.com para suporte") == (
+        "contate [email] para suporte"
+    )
+    assert det._redigir("texto sem nenhum e-mail aqui") == "texto sem nenhum e-mail aqui"
+
+
 def _resultados_sinteticos():
     instavel = det.ResultadoCaso(
         case_id="neg-008",
@@ -61,8 +68,18 @@ def _resultados_sinteticos():
         vereditos=["aprovado", "reprovado", "aprovado", "reprovado", "aprovado"],
         scores=[0.31, 0.38, 0.35, 0.33, 0.36],
         chunks=[
-            {"id": "a1", "data": "2026-04-14", "trecho": "manual antigo", "score_busca": 0.4},
-            {"id": "b2", "data": "2026-07-16", "trecho": "material novo", "score_busca": 0.5},
+            {
+                "ref": "discord-upload#1",
+                "data": "2026-04-14",
+                "trecho": "manual antigo",
+                "score_busca": 0.4,
+            },
+            {
+                "ref": "discord-upload#2",
+                "data": "2026-07-16",
+                "trecho": "material novo",
+                "score_busca": 0.5,
+            },
         ],
     )
     estavel = det.ResultadoCaso(
@@ -70,7 +87,9 @@ def _resultados_sinteticos():
         pergunta="o que são tags?",
         vereditos=["aprovado"] * 5,
         scores=[0.4] * 5,
-        chunks=[{"id": "c3", "data": "2026-05-28", "trecho": "tags", "score_busca": 0.6}],
+        chunks=[
+            {"ref": "discord-upload#3", "data": "2026-05-28", "trecho": "tags", "score_busca": 0.6}
+        ],
     )
     return [estavel, instavel]
 
