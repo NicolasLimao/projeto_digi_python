@@ -537,6 +537,11 @@ def reembed(openai_client: Any, texto: str) -> list[float]:
 def atualizar_chunk(
     cliente: Any, chunk_id: int, novo_conteudo: str, novo_embedding: list[float]
 ) -> None:
-    cliente.table("documents").update({"content": novo_conteudo, "embedding": novo_embedding}).eq(
-        "id", chunk_id
-    ).execute()
+    resposta = (
+        cliente.table("documents")
+        .update({"content": novo_conteudo, "embedding": novo_embedding})
+        .eq("id", chunk_id)
+        .execute()
+    )
+    if not (resposta.data or []):
+        raise RuntimeError(f"UPDATE nao afetou nenhuma linha (id {chunk_id} sumiu?)")

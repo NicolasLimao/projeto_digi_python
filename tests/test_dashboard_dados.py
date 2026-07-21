@@ -357,8 +357,11 @@ class _StubDocs:
 
     def execute(self):
         if self._modo == "update":
+            existe = any(linha.get("id") == self._id_alvo for linha in self.linhas)
             self.updates.append({"id": self._id_alvo, **(self._payload or {})})
-            return type("R", (), {"data": [{"id": self._id_alvo}]})()
+            dados_ret = [{"id": self._id_alvo}] if existe else []
+            self._id_alvo = None
+            return type("R", (), {"data": dados_ret})()
         linhas = self.linhas
         for coluna, valor in self.filtros:
             chave = coluna.split("->>")[-1]
@@ -494,3 +497,35 @@ def test_resolver_chunk_casa_trecho_com_email_redigido():
     # o mapa guarda o trecho JÁ com o email mascarado
     achados = dados.resolver_chunk(stub, "discord-upload#9", "contate [email] no suporte")
     assert [a["id"] for a in achados] == [5]
+
+
+class _StubOpenAI:
+    def __init__(self, vetor: list[float]):
+        self._vetor = vetor
+        self.chamada: dict | None = None
+        self.embeddings = self
+
+    def create(self, model: str, input: str):
+        self.chamada = {"model": model, "input": input}
+        dado = type("D", (), {"embedding": self._vetor})()
+        return type("R", (), {"data": [dado]})()
+
+
+def test_reembed_usa_modelo_correto_e_retorna_vetor():
+    stub = _StubOpenAI([0.1, 0.2, 0.3])
+    vetor = dados.reembed(stub, "texto novo")
+    assert vetor == [0.1, 0.2, 0.3]
+    assert stub.chamada == {"model": dados.EMBEDDING_MODEL, "input": "texto novo"}
+
+
+def test_buscar_documento_retorna_linha_ou_none():
+    stub = _StubDocs([{"id": 7, "content": "x", "embedding": [0.1], "metadata": {}}])
+    assert dados.buscar_documento(stub, 7)["content"] == "x"
+    assert dados.buscar_documento(_StubDocs([]), 99) is None
+
+
+def test_atualizar_chunk_sem_linha_afetada_levanta():
+    import pytest
+
+    with pytest.raises(RuntimeError, match="nenhuma linha"):
+        dados.atualizar_chunk(_StubDocs([]), 999, "novo", [0.1])
