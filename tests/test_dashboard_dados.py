@@ -480,3 +480,17 @@ def test_atualizar_chunk_envia_content_e_embedding():
     stub = _StubDocs([{"id": 977, "content": "velho", "metadata": {}}])
     dados.atualizar_chunk(stub, 977, "novo texto", [0.5, 0.6])
     assert stub.updates == [{"id": 977, "content": "novo texto", "embedding": [0.5, 0.6]}]
+
+
+def test_resolver_chunk_casa_trecho_com_email_redigido():
+    linhas = [
+        {
+            "id": 5,
+            "content": "contate joao@ikatec.com.br no suporte",
+            "metadata": {"fonte": "discord-upload", "chunk_index": 9},
+        },
+    ]
+    stub = _StubDocs(linhas)
+    # o mapa guarda o trecho JÁ com o email mascarado
+    achados = dados.resolver_chunk(stub, "discord-upload#9", "contate [email] no suporte")
+    assert [a["id"] for a in achados] == [5]

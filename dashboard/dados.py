@@ -7,6 +7,7 @@ testes rodem offline e a UI fique só em app.py.
 from __future__ import annotations
 
 import json
+import re
 import time
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
@@ -475,6 +476,11 @@ def _trecho_normalizado(content: str) -> str:
     return " ".join(str(content)[:120].split())
 
 
+def _redigir_email(texto: str) -> str:
+    """Mascara emails, igual ao detector faz ao montar o trecho do mapa."""
+    return re.sub(r"[\w.+-]+@[\w-]+\.[\w.-]+", "[email]", texto)
+
+
 def resolver_chunk(cliente: Any, ref: str, trecho: str) -> list[dict[str, Any]]:
     """Acha a(s) linha(s) de documents do chunk: narrowa por fonte+chunk_index e
     desempata pelo trecho normalizado (o ref sozinho não é único)."""
@@ -490,7 +496,7 @@ def resolver_chunk(cliente: Any, ref: str, trecho: str) -> list[dict[str, Any]]:
     )
     achados: list[dict[str, Any]] = []
     for linha in resposta.data or []:
-        if _trecho_normalizado(str(linha.get("content") or "")) == trecho:
+        if _redigir_email(_trecho_normalizado(str(linha.get("content") or ""))) == trecho:
             achados.append(
                 {
                     "id": linha["id"],
