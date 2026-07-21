@@ -462,6 +462,15 @@ def chunks_suspeitos(mapa: dict[str, Any]) -> list[dict[str, Any]]:
     return suspeitos
 
 
+def mapa_sem_ref(suspeitos: list[dict[str, Any]]) -> bool:
+    """True quando o mapa veio de uma versão antiga do detector (chunks sem `ref`).
+
+    Sem `ref` não há como localizar o chunk em documents — o mapa precisa ser
+    regerado rodando evals/detectar_instabilidade.py.
+    """
+    return bool(suspeitos) and all(not str(s.get("ref") or "").strip() for s in suspeitos)
+
+
 def classificar_idade(data_iso: str) -> str:
     """Rótulo visual: chunks de jul/2026 em diante são 'curado', o resto 'manual'."""
     try:

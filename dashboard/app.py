@@ -364,6 +364,14 @@ with aba_reconciliacao:
         st.stop()
 
     suspeitos = dados.chunks_suspeitos(mapa)
+    if dados.mapa_sem_ref(suspeitos):
+        st.warning(
+            "O mapa carregado foi gerado por uma versão anterior do detector e não "
+            "traz a referência dos chunks (`ref`), então eles não podem ser localizados. "
+            "Rode `evals/detectar_instabilidade.py` para gerar um mapa novo."
+        )
+        st.stop()
+
     st.caption(
         f"{len(suspeitos)} chunks suspeitos (dos casos instáveis do mapa {mapa.get('run', '?')})."
     )

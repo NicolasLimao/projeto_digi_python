@@ -421,6 +421,16 @@ def test_chunks_suspeitos_achata_instaveis_e_deduplica():
     assert suspeitos[0]["caso_id"] == "neg-008"
 
 
+def test_mapa_sem_ref_detecta_formato_antigo():
+    antigos = [{"caso_id": "neg-008", "ref": "", "trecho": "A"}]
+    novos = [{"caso_id": "neg-008", "ref": "discord-upload#37", "trecho": "A"}]
+    misto = [{"ref": ""}, {"ref": "discord-upload#37"}]
+    assert dados.mapa_sem_ref(antigos) is True
+    assert dados.mapa_sem_ref(novos) is False
+    assert dados.mapa_sem_ref(misto) is False
+    assert dados.mapa_sem_ref([]) is False
+
+
 def test_classificar_idade():
     assert dados.classificar_idade("2026-07-16T00:00:00Z") == "curado"
     assert dados.classificar_idade("2026-05-28T22:14:23.192Z") == "manual"
