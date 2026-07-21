@@ -27,6 +27,13 @@ def _cliente() -> Any:
     return dados.criar_cliente_supabase(ENV)
 
 
+@st.cache_resource(show_spinner=False)
+def _openai() -> Any:
+    from openai import OpenAI
+
+    return OpenAI(api_key=ENV.get("OPENAI_API_KEY", ""))
+
+
 @st.cache_data(ttl=300, show_spinner="Consultando Supabase...")
 def _view(nome: str) -> list[dict[str, Any]]:
     resposta = _cliente().table(nome).select("*").execute()
@@ -79,7 +86,9 @@ try:
 except Exception as erro:
     erro_duvidas = f"Falha ao carregar as fontes de dúvidas: {type(erro).__name__}"
 
-aba_metricas, aba_duvidas = st.tabs(["📊 Métricas", "❓ Dúvidas pendentes"])
+aba_metricas, aba_duvidas, aba_reconciliacao = st.tabs(
+    ["📊 Métricas", "❓ Dúvidas pendentes", "🧩 Reconciliação"]
+)
 
 # ---------------------------------------------------------------- Métricas
 with aba_metricas:
@@ -335,3 +344,72 @@ with aba_duvidas:
                     st.toast("Dúvida descartada (nada foi ensinado ao bot).", icon="🗑️")
                     _limpar_caches()
                     st.rerun()
+
+# ------------------------------------------------------------- Reconciliação
+with aba_reconciliacao:
+    st.caption(
+        "Edite chunks conflitantes apontados pelo mapa de instabilidade. "
+        "O original vai para backup local antes de qualquer alteração."
+    )
+    if not ENV.get("OPENAI_API_KEY"):
+        st.error("OPENAI_API_KEY ausente no .env — necessário para re-embedar o texto editado.")
+        st.stop()
+
+    mapa = dados.carregar_mapa_instabilidade(dados.REPORTS_DIR)
+    if not mapa:
+        st.info(
+            "Nenhum mapa de instabilidade encontrado. Rode "
+            "`evals/detectar_instabilidade.py` para gerar."
+        )
+        st.stop()
+
+    suspeitos = dados.chunks_suspeitos(mapa)
+    st.caption(
+        f"{len(suspeitos)} chunks suspeitos (dos casos instáveis do mapa {mapa.get('run', '?')})."
+    )
+
+    for suspeito in suspeitos:
+        try:
+            resolvidos = dados.resolver_chunk(_cliente(), suspeito["ref"], suspeito["trecho"])
+        except Exception as erro:  # falha de rede não derruba a aba
+            st.warning(f"Falha ao resolver `{suspeito['ref']}`: {erro}")
+            continue
+
+        if not resolvidos:
+            st.caption(f"⚠️ `{suspeito['ref']}` não encontrado (já editado/removido?).")
+            continue
+
+        for linha in resolvidos:
+            rotulo = dados.classificar_idade(suspeito["data"])
+            emoji = "🟢 curado" if rotulo == "curado" else "📄 manual"
+            with st.expander(f"{emoji} · id {linha['id']} · caso {suspeito['caso_id']}"):
+                novo = st.text_area(
+                    "Conteúdo do chunk (edite para corrigir o conflito)",
+                    value=linha["content"],
+                    key=f"cont_{linha['id']}",
+                    height=280,
+                )
+                if st.button("💾 Salvar correção", key=f"salvar_{linha['id']}"):
+                    if novo.strip() == linha["content"].strip():
+                        st.info("Nenhuma alteração no texto.")
+                    elif len(novo.strip()) < 20:
+                        st.error("O conteúdo precisa ter pelo menos 20 caracteres.")
+                    else:
+                        try:
+                            original = dados.buscar_documento(_cliente(), linha["id"])
+                            if original is None:
+                                st.error("Chunk sumiu do banco; recarregue a aba.")
+                            else:
+                                caminho = (
+                                    dados.BACKUPS_DIR
+                                    / f"documents-{datetime.now(UTC).strftime('%Y-%m-%d')}.jsonl"
+                                )
+                                dados.salvar_backup(caminho, dados.montar_backup(original))
+                                embedding = dados.reembed(_openai(), novo)
+                                dados.atualizar_chunk(_cliente(), linha["id"], novo, embedding)
+                        except Exception as erro:
+                            st.error(f"Falha ao salvar — nada foi alterado no banco. ({erro})")
+                        else:
+                            st.toast(f"Chunk {linha['id']} corrigido e re-embedado.", icon="🧩")
+                            _limpar_caches()
+                            st.rerun()
