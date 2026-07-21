@@ -420,3 +420,117 @@ def gerar_relatorio_pdf(texto_md: str) -> bytes:
     conteudo = doc.tobytes()
     doc.close()
     return bytes(conteudo)
+
+
+BACKUPS_DIR = REPO_ROOT / "dashboard" / "backups"
+EMBEDDING_MODEL = "text-embedding-3-small"
+
+
+def carregar_mapa_instabilidade(reports_dir: Path) -> dict[str, Any] | None:
+    arquivos = sorted(reports_dir.glob("instabilidade-*.json"))
+    if not arquivos:
+        return None
+    try:
+        conteudo: dict[str, Any] = json.loads(arquivos[-1].read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return conteudo
+
+
+def chunks_suspeitos(mapa: dict[str, Any]) -> list[dict[str, Any]]:
+    """Chunks dos casos instáveis (indice > 0), deduplicados por trecho."""
+    vistos: set[str] = set()
+    suspeitos: list[dict[str, Any]] = []
+    for caso in mapa.get("casos") or []:
+        if float(caso.get("indice") or 0) <= 0:
+            continue
+        for chunk in caso.get("chunks") or []:
+            trecho = str(chunk.get("trecho") or "")
+            if not trecho or trecho in vistos:
+                continue
+            vistos.add(trecho)
+            suspeitos.append(
+                {
+                    "caso_id": str(caso.get("id")),
+                    "ref": str(chunk.get("ref") or ""),
+                    "data": str(chunk.get("data") or ""),
+                    "trecho": trecho,
+                    "score_busca": chunk.get("score_busca"),
+                }
+            )
+    return suspeitos
+
+
+def classificar_idade(data_iso: str) -> str:
+    """Rótulo visual: chunks de jul/2026 em diante são 'curado', o resto 'manual'."""
+    try:
+        dia = date.fromisoformat(str(data_iso)[:10])
+    except ValueError:
+        return "manual"
+    return "curado" if dia >= date(2026, 7, 1) else "manual"
+
+
+def _trecho_normalizado(content: str) -> str:
+    """Reproduz o trecho do detector: primeiros 120 chars com espaços colapsados."""
+    return " ".join(str(content)[:120].split())
+
+
+def resolver_chunk(cliente: Any, ref: str, trecho: str) -> list[dict[str, Any]]:
+    """Acha a(s) linha(s) de documents do chunk: narrowa por fonte+chunk_index e
+    desempata pelo trecho normalizado (o ref sozinho não é único)."""
+    fonte, _, indice = ref.rpartition("#")
+    if not fonte:
+        return []
+    resposta = (
+        cliente.table("documents")
+        .select("id,content,metadata")
+        .eq("metadata->>fonte", fonte)
+        .eq("metadata->>chunk_index", indice)
+        .execute()
+    )
+    achados: list[dict[str, Any]] = []
+    for linha in resposta.data or []:
+        if _trecho_normalizado(str(linha.get("content") or "")) == trecho:
+            achados.append(
+                {
+                    "id": linha["id"],
+                    "content": str(linha.get("content") or ""),
+                    "metadata": linha.get("metadata") or {},
+                }
+            )
+    return achados
+
+
+def buscar_documento(cliente: Any, chunk_id: int) -> dict[str, Any] | None:
+    resposta = cliente.table("documents").select("*").eq("id", chunk_id).execute()
+    linhas = resposta.data or []
+    return dict(linhas[0]) if linhas else None
+
+
+def montar_backup(linha: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": linha.get("id"),
+        "content": linha.get("content"),
+        "embedding": linha.get("embedding"),
+        "metadata": linha.get("metadata"),
+        "backup_em": datetime.now(UTC).isoformat(),
+    }
+
+
+def salvar_backup(caminho: Path, backup: dict[str, Any]) -> None:
+    caminho.parent.mkdir(parents=True, exist_ok=True)
+    with caminho.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(backup, ensure_ascii=False) + "\n")
+
+
+def reembed(openai_client: Any, texto: str) -> list[float]:
+    resposta = openai_client.embeddings.create(model=EMBEDDING_MODEL, input=texto)
+    return list(resposta.data[0].embedding)
+
+
+def atualizar_chunk(
+    cliente: Any, chunk_id: int, novo_conteudo: str, novo_embedding: list[float]
+) -> None:
+    cliente.table("documents").update({"content": novo_conteudo, "embedding": novo_embedding}).eq(
+        "id", chunk_id
+    ).execute()

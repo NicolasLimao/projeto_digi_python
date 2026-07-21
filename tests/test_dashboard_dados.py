@@ -322,3 +322,161 @@ def test_descartar_duvida_registra_sem_ingerir():
     assert stub.inserido["chunks_criados"] == 0
     assert "descartada" in stub.inserido["resposta_correta"]
     assert dados.MOTIVOS_DESCARTE["invalida"] in stub.inserido["resposta_correta"]
+
+
+class _StubDocs:
+    """Stub do cliente Supabase para a tabela documents (resolução/backup/update)."""
+
+    def __init__(self, linhas: list[dict] | None = None):
+        self.linhas = linhas or []
+        self.filtros: list[tuple[str, str]] = []
+        self._modo = "select"
+        self._payload: dict | None = None
+        self._id_alvo = None
+        self.updates: list[dict] = []
+
+    def table(self, nome: str):
+        self.tabela = nome
+        return self
+
+    def select(self, *_):
+        self._modo = "select"
+        return self
+
+    def update(self, payload: dict):
+        self._modo = "update"
+        self._payload = payload
+        return self
+
+    def eq(self, coluna: str, valor):
+        if coluna == "id":
+            self._id_alvo = valor
+        else:
+            self.filtros.append((coluna, str(valor)))
+        return self
+
+    def execute(self):
+        if self._modo == "update":
+            self.updates.append({"id": self._id_alvo, **(self._payload or {})})
+            return type("R", (), {"data": [{"id": self._id_alvo}]})()
+        linhas = self.linhas
+        for coluna, valor in self.filtros:
+            chave = coluna.split("->>")[-1]
+            linhas = [
+                linha for linha in linhas if str((linha.get("metadata") or {}).get(chave)) == valor
+            ]
+        if self._id_alvo is not None:
+            linhas = [linha for linha in linhas if linha.get("id") == self._id_alvo]
+        self.filtros = []
+        self._id_alvo = None
+        return type("R", (), {"data": [dict(linha) for linha in linhas]})()
+
+
+def test_chunks_suspeitos_achata_instaveis_e_deduplica():
+    mapa = {
+        "casos": [
+            {
+                "id": "neg-008",
+                "indice": 0.4,
+                "chunks": [
+                    {
+                        "ref": "discord-upload#37",
+                        "data": "2026-05-28",
+                        "trecho": "A",
+                        "score_busca": 0.4,
+                    },
+                    {
+                        "ref": "discord-upload#41",
+                        "data": "2026-05-28",
+                        "trecho": "B",
+                        "score_busca": 0.3,
+                    },
+                ],
+            },
+            {
+                "id": "pos-002",
+                "indice": 0.0,
+                "chunks": [{"ref": "x#1", "data": "2026-05-28", "trecho": "Z", "score_busca": 0.6}],
+            },
+            {
+                "id": "neg-013",
+                "indice": 0.4,
+                "chunks": [
+                    {
+                        "ref": "discord-upload#37",
+                        "data": "2026-05-28",
+                        "trecho": "A",
+                        "score_busca": 0.4,
+                    }
+                ],
+            },
+        ]
+    }
+    suspeitos = dados.chunks_suspeitos(mapa)
+    trechos = [s["trecho"] for s in suspeitos]
+    assert trechos == ["A", "B"]  # dedupe por trecho; pos-002 (estável) fora
+    assert suspeitos[0]["caso_id"] == "neg-008"
+
+
+def test_classificar_idade():
+    assert dados.classificar_idade("2026-07-16T00:00:00Z") == "curado"
+    assert dados.classificar_idade("2026-05-28T22:14:23.192Z") == "manual"
+    assert dados.classificar_idade("2026-04-14") == "manual"
+    assert dados.classificar_idade("data-invalida") == "manual"
+
+
+def test_resolver_chunk_desempata_por_conteudo_normalizado():
+    linhas = [
+        {
+            "id": 977,
+            "content": "Agente   Inteligente\ncontratado",
+            "metadata": {"fonte": "discord-upload", "chunk_index": 37},
+        },
+        {
+            "id": 45,
+            "content": "Outro chunk qualquer",
+            "metadata": {"fonte": "discord-upload", "chunk_index": 37},
+        },
+    ]
+    stub = _StubDocs(linhas)
+    trecho = dados._trecho_normalizado("Agente   Inteligente\ncontratado")
+    achados = dados.resolver_chunk(stub, "discord-upload#37", trecho)
+    assert [a["id"] for a in achados] == [977]
+
+
+def test_resolver_chunk_sem_match_retorna_vazio():
+    stub = _StubDocs(
+        [
+            {
+                "id": 1,
+                "content": "nada a ver",
+                "metadata": {"fonte": "discord-upload", "chunk_index": 37},
+            }
+        ]
+    )
+    assert dados.resolver_chunk(stub, "discord-upload#37", "trecho inexistente") == []
+
+
+def test_montar_backup_preserva_campos_do_original():
+    linha = {"id": 977, "content": "velho", "embedding": [0.1, 0.2], "metadata": {"fonte": "x"}}
+    backup = dados.montar_backup(linha)
+    assert backup["id"] == 977
+    assert backup["content"] == "velho"
+    assert backup["embedding"] == [0.1, 0.2]
+    assert backup["metadata"] == {"fonte": "x"}
+    assert "backup_em" in backup
+
+
+def test_salvar_backup_faz_append_jsonl(tmp_path):
+    caminho = tmp_path / "documents-2026-07-19.jsonl"
+    dados.salvar_backup(caminho, {"id": 1, "content": "a"})
+    dados.salvar_backup(caminho, {"id": 2, "content": "b"})
+    linhas = caminho.read_text(encoding="utf-8").strip().splitlines()
+    assert len(linhas) == 2
+    assert json.loads(linhas[1])["id"] == 2
+
+
+def test_atualizar_chunk_envia_content_e_embedding():
+    stub = _StubDocs([{"id": 977, "content": "velho", "metadata": {}}])
+    dados.atualizar_chunk(stub, 977, "novo texto", [0.5, 0.6])
+    assert stub.updates == [{"id": 977, "content": "novo texto", "embedding": [0.5, 0.6]}]
