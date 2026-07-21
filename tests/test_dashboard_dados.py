@@ -499,7 +499,7 @@ def test_resolver_chunk_casa_trecho_com_email_redigido():
     linhas = [
         {
             "id": 5,
-            "content": "contate joao@ikatec.com.br no suporte",
+            "content": "contate joao@exemplo.com no suporte",
             "metadata": {"fonte": "discord-upload", "chunk_index": 9},
         },
     ]
