@@ -3,6 +3,10 @@
 import importlib.util
 import sys
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 _EVALS = Path(__file__).resolve().parents[1] / "evals"
 
@@ -111,3 +115,44 @@ def test_relatorio_json_ordenado_e_sem_chave_vereditos_no_topo():
     assert ids == ["neg-008", "pos-002"]  # mais instável primeiro
     assert estrutura["casos"][0]["conflito_potencial"] is True
     assert estrutura["casos"][0]["erros"] == 0
+
+
+def _clientes_stub(itens: list[dict]):
+    """Stubs do OpenAI (async) e do Supabase (sync, chamado via to_thread)."""
+    openai_client = MagicMock()
+    openai_client.embeddings.create = AsyncMock(
+        return_value=SimpleNamespace(data=[SimpleNamespace(embedding=[0.1] * 4)])
+    )
+    supabase_client = MagicMock()
+    supabase_client.rpc.return_value.execute.return_value = SimpleNamespace(data=itens)
+    return openai_client, supabase_client
+
+
+@pytest.mark.asyncio
+async def test_chunks_registram_o_id_real_do_documento():
+    openai_client, supabase_client = _clientes_stub(
+        [
+            {
+                "id": 1700,
+                "content": "texto do chunk",
+                "metadata": {
+                    "fonte": "discord-upload",
+                    "chunk_index": 37,
+                    "data": "2026-05-02",
+                },
+                "score": 0.31,
+            }
+        ]
+    )
+    chunks = await det._chunks_do_caso(openai_client, supabase_client, "backup")
+    assert chunks[0]["id"] == "1700"
+    assert chunks[0]["ref"] == "discord-upload#37"  # `ref` continua no mapa
+
+
+@pytest.mark.asyncio
+async def test_chunk_sem_id_fica_com_string_vazia():
+    openai_client, supabase_client = _clientes_stub(
+        [{"content": "texto", "metadata": {"fonte": "discord-upload", "chunk_index": 1}}]
+    )
+    chunks = await det._chunks_do_caso(openai_client, supabase_client, "backup")
+    assert chunks[0]["id"] == ""

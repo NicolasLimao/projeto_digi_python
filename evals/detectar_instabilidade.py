@@ -212,14 +212,15 @@ async def _chunks_do_caso(
     for item in resposta.data or []:
         conteudo = _redigir(" ".join(str(item.get("content") or "")[:120].split()))
         metadados = item.get("metadata") or {}
-        # A RPC match_documents_hybrid não retorna o uuid real do chunk (só content,
-        # metadata, score) — por isso usamos fonte#chunk_index como referência (Fase 2
-        # troca por um id de verdade quando a RPC devolver a coluna).
+        # `ref` (fonte#chunk_index) não é único — chunk_index reinicia a cada batch de
+        # upload. O `id` (migração 004) é o localizador confiável; `ref` fica para
+        # leitura humana e para o mapa continuar compatível com o dashboard.
         fonte = str(metadados.get("fonte") or "?")
         indice = metadados.get("chunk_index")
         ref = f"{fonte}#{indice}"
         chunks.append(
             {
+                "id": str(item.get("id") or ""),
                 "ref": ref,
                 "data": (str(metadados.get("data") or "")[:10] or None),
                 "trecho": conteudo,
