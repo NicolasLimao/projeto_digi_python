@@ -9,7 +9,7 @@ description = "Secure RAG API for Digisac support analysts"
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
-  "fastapi==0.139.0",
+  "fastapi==0.139.2",
   "httpx==0.28.1",
   "mistralai==2.6.0",
   "openai==2.45.0",
