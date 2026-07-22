@@ -218,9 +218,10 @@ async def _chunks_do_caso(
         fonte = str(metadados.get("fonte") or "?")
         indice = metadados.get("chunk_index")
         ref = f"{fonte}#{indice}"
+        id_bruto = item.get("id")
         chunks.append(
             {
-                "id": str(item.get("id") or ""),
+                "id": str(id_bruto) if id_bruto is not None else "",
                 "ref": ref,
                 "data": (str(metadados.get("data") or "")[:10] or None),
                 "trecho": conteudo,

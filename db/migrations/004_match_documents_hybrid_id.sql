@@ -10,8 +10,41 @@
 -- Ordem de aplicacao: rodar depois da 003 e ANTES de publicar o codigo Python
 -- que le o id. Nesta ordem a coluna extra e ignorada com seguranca pelo codigo
 -- antigo, e o codigo novo nunca roda contra a funcao sem id.
+--
+-- Por que DROP + CREATE em vez de CREATE OR REPLACE: as colunas do RETURNS
+-- TABLE sao parametros OUT, e acrescentar "id bigint" muda o tipo de retorno
+-- da funcao. CREATE OR REPLACE recusa isso de forma deterministica com
+-- "ERROR: cannot change return type of existing function" — nao ha como
+-- aplicar esta migracao sem o DROP antes.
+--
+-- A transacao (begin/commit) evita janela de indisponibilidade: com DROP e
+-- CREATE na mesma transacao, chamadas concorrentes que cheguem enquanto isto
+-- roda ficam bloqueadas esperando o commit (e depois veem a funcao nova),
+-- em vez de falhar com "function does not exist" no intervalo entre os dois
+-- comandos.
+--
+-- O DROP tambem descarta privilegios (GRANT/REVOKE) da funcao, que voltam ao
+-- default na recriacao. Hoje isso e inofensivo: a funcao roda como
+-- SECURITY INVOKER e a RLS de documents ja protege o acesso. Mas importa se
+-- algum dia alguem tornar esta funcao SECURITY DEFINER — nesse caso, confira
+-- os grants apos aplicar.
+--
+-- Se a RPC responder 404/PGRST202 logo depois de aplicar, o PostgREST esta
+-- com o schema cache antigo (nao encontrou a funcao nova ainda). O remedio e
+-- rodar no SQL Editor: NOTIFY pgrst, 'reload schema';
+--
+-- Rollback (nesta ordem — reverter so o SQL sem reverter o Python devolve
+-- fontes = ["chunk_0", ...] em vez dos ids reais):
+--   1. DROP FUNCTION public.match_documents_hybrid(text, text, integer, double precision, double precision);
+--   2. Reaplicar db/migrations/003_match_documents_hybrid.sql;
+--   3. Reverter o deploy do codigo Python para a versao anterior a esta branch.
 
-CREATE OR REPLACE FUNCTION public.match_documents_hybrid(
+begin;
+
+drop function if exists public.match_documents_hybrid(
+  text, text, integer, double precision, double precision);
+
+create function public.match_documents_hybrid(
   query_text text,
   query_embedding text,
   match_count integer DEFAULT 10,
@@ -45,3 +78,5 @@ BEGIN
   FROM combined ORDER BY combined_score DESC LIMIT match_count;
 END;
 $function$;
+
+commit;

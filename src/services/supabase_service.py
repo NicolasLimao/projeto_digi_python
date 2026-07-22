@@ -79,9 +79,20 @@ class SupabaseService:
             score = float(item.get("score") or 0.0)
             if score < score_threshold:
                 continue
+            # `id` real pode ser 0 (falsy) — checar por None explicitamente, não por
+            # `or`, senão um id legitimo igual a 0 vira "chunk_<index>" em silêncio.
+            # O warning só dispara para itens que sobrevivem ao score_threshold, que
+            # são os que de fato chegam a `fontes`/`historico_digi` — item filtrado
+            # nunca é persistido, então avisar sobre ele seria ruído.
+            id_bruto = item.get("id")
+            if id_bruto is None:
+                logger.warning(
+                    "RPC sem id — funcao match_documents_hybrid desatualizada?",
+                    extra={"extras": {"index": index}},
+                )
             documents.append(
                 Document(
-                    id=str(item.get("id") or f"chunk_{index}"),
+                    id=str(id_bruto) if id_bruto is not None else f"chunk_{index}",
                     content=str(item.get("content") or ""),
                     embedding=item.get("embedding") or embedding,
                     metadata=item.get("metadata") or {},

@@ -97,3 +97,13 @@ async def test_search_hybrid_falls_back_when_id_is_unusable(item: dict):
     client.rpc.return_value.execute.return_value = SimpleNamespace(data=[item])
     documents = await SupabaseService(client=client).search_hybrid([0.1], "backup")
     assert documents[0].id == "chunk_0"
+
+
+@pytest.mark.asyncio
+async def test_search_hybrid_keeps_falsy_but_valid_id_zero():
+    client = MagicMock()
+    client.rpc.return_value.execute.return_value = SimpleNamespace(
+        data=[{"id": 0, "content": "texto", "score": 0.8, "metadata": {}}]
+    )
+    documents = await SupabaseService(client=client).search_hybrid([0.1], "backup")
+    assert documents[0].id == "0"

@@ -10,6 +10,23 @@
 --     ts_rank nao e normalizado (0.01-0.1) contra o cosseno (0.3-0.5);
 --   * LTRIM(query_embedding, '=') e heranca do n8n;
 --   * nao ha indice vetorial (ivfflat/hnsw): a CTE semantica varre a tabela.
+--
+-- ATENCAO: esta migracao NAO se auto-verifica. CREATE OR REPLACE com a mesma
+-- assinatura SEMPRE tem sucesso — ele sobrescreve o corpo da funcao qualquer
+-- que ele fosse, sem erro nenhum. Se o export de 21/07/2026 abaixo estiver
+-- desatualizado ou tiver perdido algo na transcricao, aplicar esta migracao
+-- em producao troca a logica de recuperacao silenciosamente. Antes de
+-- aplicar em producao, compare com o que esta no banco:
+--
+-- SELECT oid::regprocedure, md5(prosrc) FROM pg_proc WHERE proname = 'match_documents_hybrid';
+-- SELECT pg_get_functiondef(oid) FROM pg_proc WHERE proname = 'match_documents_hybrid';
+--
+-- A primeira query tambem serve para detectar overload: se aparecer mais de
+-- uma linha, ja existe outra sobrecarga da funcao no banco, e aplicar esta
+-- migracao criaria uma terceira — o PostgREST passaria a responder PGRST203
+-- (ambiguous) e a busca cairia. Por isso a query usa ::regprocedure (que
+-- aceita overloads) e nao 'public.match_documents_hybrid'::regproc, que
+-- falha justamente quando ha mais de uma sobrecarga no banco.
 
 CREATE OR REPLACE FUNCTION public.match_documents_hybrid(
   query_text text,
