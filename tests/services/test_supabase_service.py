@@ -71,3 +71,29 @@ async def test_get_document_returns_none_for_missing_row():
         SimpleNamespace(data=[])
     )
     assert await SupabaseService(client=client).get_document("missing") is None
+
+
+@pytest.mark.asyncio
+async def test_search_hybrid_uses_real_document_id():
+    client = MagicMock()
+    client.rpc.return_value.execute.return_value = SimpleNamespace(
+        data=[{"id": 1700, "content": "texto", "score": 0.8, "metadata": {}}]
+    )
+    documents = await SupabaseService(client=client).search_hybrid([0.1], "backup")
+    assert documents[0].id == "1700"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "item",
+    [
+        {"id": None, "content": "texto", "score": 0.8, "metadata": {}},
+        {"content": "texto", "score": 0.8, "metadata": {}},
+    ],
+    ids=["id_nulo", "id_ausente"],
+)
+async def test_search_hybrid_falls_back_when_id_is_unusable(item: dict):
+    client = MagicMock()
+    client.rpc.return_value.execute.return_value = SimpleNamespace(data=[item])
+    documents = await SupabaseService(client=client).search_hybrid([0.1], "backup")
+    assert documents[0].id == "chunk_0"

@@ -81,7 +81,7 @@ class SupabaseService:
                 continue
             documents.append(
                 Document(
-                    id=str(item.get("id", f"chunk_{index}")),
+                    id=str(item.get("id") or f"chunk_{index}"),
                     content=str(item.get("content") or ""),
                     embedding=item.get("embedding") or embedding,
                     metadata=item.get("metadata") or {},
