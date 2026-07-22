@@ -38,7 +38,7 @@ async def test_retrieve_builds_metrics_and_sources(rag_agent):
     result = await rag_agent.retrieve("Como fazer backup?", k=10)
     assert result["chunks_used"] == 2
     assert result["score"] == pytest.approx(0.8)
-    assert result["fontes"] == ["manual", "faq"]
+    assert result["fontes"] == ["1", "2"]
 
 
 @pytest.mark.asyncio

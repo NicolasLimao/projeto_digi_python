@@ -56,10 +56,10 @@ class RAGAgent(Agent):
         documents = await self.openai.rerank(search_query, documents, top_n=final_n)
         self.logger.info(f"[{self.name}] After rerank: {len(documents)} documents")
 
-        fontes = [
-            (doc.metadata.get("fonte") if isinstance(doc.metadata, dict) else None) or doc.id
-            for doc in documents
-        ]
+        # Ids reais dos chunks usados na resposta: dá para voltar em `documents` e
+        # recuperar conteúdo e `fonte`. Antes daqui ia `metadata["fonte"]`, que é
+        # sempre 'discord-upload' e não rastreia nada. Histórico antigo fica como está.
+        fontes = [doc.id for doc in documents]
         avg_score = (
             (sum(doc.score or 0.0 for doc in documents) / len(documents)) if documents else 0.0
         )
